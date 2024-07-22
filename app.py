@@ -67,6 +67,7 @@ def get_system_info():
         if part.mountpoint in relevant_mountpoints and part.mountpoint not in seen:
             seen.add(part.mountpoint)
             usage = psutil.disk_usage(part.mountpoint)
+            print(f"filesystem: {part.device}, size: {get_size(usage.total),}")
             disk_usage.append({
                 'filesystem': part.device,
                 'size': get_size(usage.total),
