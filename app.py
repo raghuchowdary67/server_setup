@@ -156,21 +156,30 @@ class ManageService(Resource):
         try:
             if operation == 'stop':
                 result = subprocess.run(['sudo', 'docker-compose', 'stop'], cwd=service_directory, check=True, capture_output=True)
+                output = result.stdout.decode() + result.stderr.decode()
             elif operation == 'restart':
                 result = subprocess.run(['sudo', 'docker-compose', 'restart'], cwd=service_directory, check=True, capture_output=True)
+                output = result.stdout.decode() + result.stderr.decode()
             elif operation == 'start':
                 result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
+                git_output = result.stdout.decode() + result.stderr.decode()
                 result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
+                output = git_output + result.stdout.decode() + result.stderr.decode()
             elif operation == 'update':
                 # Pull latest changes from the repository
                 result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
+                git_output = result.stdout.decode() + result.stderr.decode()
                 # Build the new image
                 build_result = subprocess.run(['sudo', 'docker-compose', 'build'], cwd=service_directory, check=True, capture_output=True)
+                build_output = build_result.stdout.decode() + build_result.stderr.decode()
                 # Stop and remove existing container
                 stop_result = subprocess.run(['sudo', 'docker-compose', 'rm', '-sf'], cwd=service_directory, check=True, capture_output=True)
+                stop_output = stop_result.stdout.decode() + stop_result.stderr.decode()
                 # Start the new container
-                restart_result = subprocess.run(['sudo', 'docker-compose', 'up', '-d', 'server_setup'], cwd=service_directory, check=True, capture_output=True)
-            return jsonify({'status': 'success', 'output': result.stdout.decode(), 'build_output': build_result.stdout.decode(), 'stop_output': stop_result.stdout.decode(), 'restart_output': restart_result.stdout.decode()}), 200
+                restart_result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
+                restart_output = restart_result.stdout.decode() + restart_result.stderr.decode()
+                output = git_output + build_output + stop_output + restart_output
+            return jsonify({'status': 'success', 'output': output}), 200
         except subprocess.CalledProcessError as e:
             return jsonify({'status': 'error', 'message': e.stderr.decode()}), 500
 
