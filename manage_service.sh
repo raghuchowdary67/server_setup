@@ -11,6 +11,7 @@ fi
 # Trust the directory
 git config --global --add safe.directory "$SERVICE_DIRECTORY"
 
+# change directory
 cd $SERVICE_DIRECTORY
 
 case $OPERATION in
