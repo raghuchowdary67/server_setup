@@ -11,13 +11,6 @@ services:
       - mariadb_data:/var/lib/mysql
     ports:
       - "3306:3306"
-    deploy:
-      resources:
-        reservations:
-          cpus: '0.5' # Guaranteed 0.5 CPUs
-        limits:
-          cpus: '2' # Allow up to 2 CPU cores
-          memory: '512M'
 
   redis:
     image: redis:6
@@ -27,13 +20,6 @@ services:
       - redis_data:/data
     ports:
       - "6379:6379"
-    deploy:
-      resources:
-        reservations:
-          cpus: '0.25' # Guaranteed 0.5 CPUs
-        limits:
-          cpus: '0.5' # Allow up to 2 CPU cores
-          memory: '256M'
 
   server_setup:
     build: .

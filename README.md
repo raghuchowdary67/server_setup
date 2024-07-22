@@ -34,3 +34,50 @@ curl -X POST "http://<your_server_ip>:5000/monitor/service" -H "Content-Type: ap
   "folder_name": "your_project_folder",
   "operation": "update"
 }'
+
+
+#LOGS
+
+List all running containers:
+
+bash
+Copy code
+docker ps
+This might output something like:
+
+plaintext
+Copy code
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
+abc123456789        flask_app:latest    "python app.py"          5 minutes ago       Up 5 minutes        0.0.0.0:5000->5000/tcp   flask_app
+def234567890        mariadb:10.5        "docker-entrypoint.s…"   5 minutes ago       Up 5 minutes        0.0.0.0:3306->3306/tcp   mariadb
+ghi345678901        redis:6             "docker-entrypoint.s…"   5 minutes ago       Up 5 minutes        0.0.0.0:6379->6379/tcp   redis
+Find the CONTAINER ID or NAMES for your flask_app container.
+
+View the logs of the Flask application container:
+
+bash
+Copy code
+docker logs flask_app
+Follow the logs in real-time:
+
+bash
+Copy code
+docker logs -f flask_app
+Viewing Logs for All Services in Docker Compose
+If you want to view logs for all services defined in your Docker Compose file, you can use the docker-compose logs command.
+
+Navigate to the directory containing your docker-compose.yml file:
+
+bash
+Copy code
+cd /home/redbull/flask_app
+View the logs for all services:
+
+bash
+Copy code
+sudo docker-compose logs
+Follow the logs in real-time:
+
+bash
+Copy code
+sudo docker-compose logs -f

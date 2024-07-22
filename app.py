@@ -158,16 +158,18 @@ class ManageService(Resource):
             elif operation == 'restart':
                 result = subprocess.run(['sudo', 'docker-compose', 'restart'], cwd=service_directory, check=True, capture_output=True)
             elif operation == 'start':
-                result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=service_directory, check=True, capture_output=True)
+                result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
                 result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
             elif operation == 'update':
                 # Pull latest changes from the repository
-                result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=service_directory, check=True, capture_output=True)
+                result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
                 # Build the new image
                 build_result = subprocess.run(['sudo', 'docker-compose', 'build'], cwd=service_directory, check=True, capture_output=True)
-                # Restart the service with the new image
-                result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
-            return jsonify({'status': 'success', 'output': result.stdout.decode(), 'build_output': build_result.stdout.decode()}), 200
+                # Stop and remove existing container
+                stop_result = subprocess.run(['sudo', 'docker-compose', 'rm', '-sf'], cwd=service_directory, check=True, capture_output=True)
+                # Start the new container
+                restart_result = subprocess.run(['sudo', 'docker-compose', 'up', '-d', 'server_setup'], cwd=service_directory, check=True, capture_output=True)
+            return jsonify({'status': 'success', 'output': result.stdout.decode(), 'build_output': build_result.stdout.decode(), 'stop_output': stop_result.stdout.decode(), 'restart_output': restart_result.stdout.decode()}), 200
         except subprocess.CalledProcessError as e:
             return jsonify({'status': 'error', 'message': e.stderr.decode()}), 500
 
