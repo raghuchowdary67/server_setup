@@ -9,7 +9,7 @@ services:
       - /home/secrets/.env
     volumes:
       - mariadb_data:/var/lib/mysql
-      - /home/redbull/server_setup/init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init.sql file
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init.sql file
     ports:
       - "3306:3306"
 
