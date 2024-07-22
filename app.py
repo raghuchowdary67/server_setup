@@ -169,6 +169,10 @@ class ManageService(Resource):
         operation = request.json.get('operation')
         service_directory = f"/home/redbull/{folder_name}"
 
+        if 'server_setup' in folder_name:
+            print("This folder is not supported")
+            return {'message': f'Directory {service_directory} This folder is not supported.'}, 400
+
         if not os.path.isdir(service_directory):
             print("file not found")
             return {'message': f'Directory {service_directory} does not exist.'}, 400
