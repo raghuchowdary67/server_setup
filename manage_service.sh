@@ -30,9 +30,9 @@ case $OPERATION in
         ;;
     update)
         git pull origin master
-        nohup docker-compose build $FOLDER_NAME > /dev/null 2>&1 &
-        nohup docker-compose rm -sf $FOLDER_NAME > /dev/null 2>&1 &
-        nohup docker-compose up -d $FOLDER_NAME > /dev/null 2>&1 &
+        docker-compose build $FOLDER_NAME &&
+        docker-compose rm -sf $FOLDER_NAME &&
+        docker-compose up -d $FOLDER_NAME
         ;;
     *)
         echo "Invalid operation: $OPERATION"
