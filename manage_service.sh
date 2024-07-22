@@ -19,17 +19,20 @@ echo "After the PWD is : ${PWD}"
 
 case $OPERATION in
     stop)
-        docker-compose stop $FOLDER_NAME
+        nohup docker-compose stop $FOLDER_NAME > /dev/null 2>&1 &
         ;;
     restart)
-        docker-compose restart $FOLDER_NAME
+        nohup docker-compose restart $FOLDER_NAME > /dev/null 2>&1 &
         ;;
     start)
         git pull origin master
-        docker-compose up -d $FOLDER_NAME
+        nohup docker-compose up -d $FOLDER_NAME > /dev/null 2>&1 &
         ;;
     update)
-        git pull; docker-compose build server_setup; docker-compose rm -sf server_setup; docker-compose up -d server_setup
+        git pull origin master
+        nohup docker-compose build $FOLDER_NAME > /dev/null 2>&1 &
+        nohup docker-compose rm -sf $FOLDER_NAME > /dev/null 2>&1 &
+        nohup docker-compose up -d $FOLDER_NAME > /dev/null 2>&1 &
         ;;
     *)
         echo "Invalid operation: $OPERATION"
