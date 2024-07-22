@@ -61,10 +61,9 @@ def get_system_info():
 
     # Get unique mountpoints for filtering duplicates
     seen = set()
-    relevant_mountpoints = ['/', '/home', '/mnt', '/mnt/newdrive']
-
+    relevant_mountpoints = ['/', '/home', '/mnt/newdrive']
     for part in psutil.disk_partitions():
-        if any(part.mountpoint.startswith(mp) for mp in relevant_mountpoints) and part.mountpoint not in seen:
+        if part.mountpoint in relevant_mountpoints and part.mountpoint not in seen:
             seen.add(part.mountpoint)
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage.append({
@@ -143,6 +142,8 @@ class ManageEnv(Resource):
     @ns.marshal_with(env_model)
     def get(self):
         env_file = '/home/secrets/.env'
+        if not os.path.exists(env_file):
+            return {'env': 'No environment file found.'}, 404
         with open(env_file, 'r') as file:
             env_data = file.read()
         return {'env': env_data}
@@ -171,7 +172,7 @@ class ManageService(Resource):
 
         if not os.path.isdir(service_directory):
             print("File not exists")
-            return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'})
+            return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'}), 400
 
         try:
             output = ''
