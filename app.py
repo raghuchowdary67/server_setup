@@ -47,7 +47,7 @@ def get_system_info():
     memory_usage = memory.percent
     disk_usage = []
     for part in psutil.disk_partitions():
-        print('part: '+part)
+        print('part: '+str(part))
         if part.device.startswith('/dev'):
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage.append({
