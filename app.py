@@ -103,8 +103,8 @@ def get_docker_stats():
 
         stats.append({
             'container_name': container.name,
-            'cpu_usage': cpu_percent,
-            'memory_usage': memory_usage
+            'cpu_usage': f"{cpu_percent:.2f}%",  # Format CPU usage as a percentage
+            'memory_usage': f"{memory_usage:.2f}%"  # Format memory usage as a percentage
         })
     return stats
 
