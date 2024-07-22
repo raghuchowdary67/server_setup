@@ -29,6 +29,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /home/secrets/.env:/home/secrets/.env  # Mount the .env file
       - /home/redbull:/home/redbull            # Mount the /home/redbull directory
+      - /:/host_fs  # Add this line to bind mount the host root
     ports:
       - "5000:5000"
 
