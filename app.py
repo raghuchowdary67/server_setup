@@ -59,10 +59,13 @@ def get_system_info():
     memory_usage = memory.percent
     disk_usage = []
 
-    relevant_mount_points = ['/', '/home', '/mnt', '/mnt/newdrive']
+    # Get unique mountpoints for filtering duplicates
+    seen = set()
+    relevant_mountpoints = ['/', '/home', '/mnt', '/mnt/newdrive']
 
     for part in psutil.disk_partitions():
-        if any(part.mountpoint.startswith(mp) for mp in relevant_mount_points):
+        if any(part.mountpoint.startswith(mp) for mp in relevant_mountpoints) and part.mountpoint not in seen:
+            seen.add(part.mountpoint)
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage.append({
                 'filesystem': part.device,
