@@ -29,7 +29,7 @@ case $OPERATION in
         docker-compose up -d $FOLDER_NAME
         ;;
     update)
-        git pull; sudo docker-compose build; sudo docker-compose rm -sf server_setup; sudo docker-compose up -d server_setup
+        git pull; docker-compose build server_setup; docker-compose rm -sf server_setup; docker-compose up -d server_setup
         ;;
     *)
         echo "Invalid operation: $OPERATION"
