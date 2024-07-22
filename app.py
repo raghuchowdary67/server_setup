@@ -41,20 +41,34 @@ service_operation_model = api.model('ServiceOperation', {
     'operation': fields.String(required=True, description='Operation to perform', enum=['stop', 'restart', 'start', 'update'])
 })
 
+
+def get_size(size_in_bytes):
+    # Convert size from bytes to a human-readable format
+    size_units = ['B', 'KB', 'MB', 'GB', 'TB']
+    index = 0
+    size = size_in_bytes
+    while size > 1024 and index < len(size_units) - 1:
+        size /= 1024
+        index += 1
+    return f"{size:.2f} {size_units[index]}"
+
+
 def get_system_info():
     cpu_usage = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
     memory_usage = memory.percent
     disk_usage = []
+
+    relevant_mount_points = ['/', '/home', '/mnt', '/mnt/newdrive']
+
     for part in psutil.disk_partitions():
-        print('part: '+str(part))
-        if part.device.startswith('/dev'):
+        if any(part.mountpoint.startswith(mp) for mp in relevant_mount_points):
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage.append({
                 'filesystem': part.device,
-                'size': usage.total,
-                'used': usage.used,
-                'available': usage.free,
+                'size': get_size(usage.total),
+                'used': get_size(usage.used),
+                'available': get_size(usage.free),
                 'percent': usage.percent,
                 'mounted_on': part.mountpoint
             })
