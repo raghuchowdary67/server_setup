@@ -20,6 +20,7 @@ system_model = api.model('SystemInfo', {
 })
 
 docker_model = api.model('DockerStats', {
+    'container_name': fields.String(required=True, description='Container name'),
     'cpu_usage': fields.Float(required=True, description='CPU usage percentage'),
     'memory_usage': fields.Float(required=True, description='Memory usage percentage')
 })
@@ -61,7 +62,6 @@ def get_system_info():
         'memory_usage': memory_usage,
         'disk_usage': disk_usage
     }
-
 
 def get_docker_stats():
     containers = client.containers.list()
@@ -158,12 +158,16 @@ class ManageService(Resource):
             elif operation == 'restart':
                 result = subprocess.run(['sudo', 'docker-compose', 'restart'], cwd=service_directory, check=True, capture_output=True)
             elif operation == 'start':
-                result = subprocess.run(['git', 'pull'], cwd=service_directory, check=True, capture_output=True)
+                result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=service_directory, check=True, capture_output=True)
                 result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
             elif operation == 'update':
-                result = subprocess.run(['git', 'pull'], cwd=service_directory, check=True, capture_output=True)
-                result = subprocess.run(['sudo', 'docker-compose', 'up', '-d', '--build'], cwd=service_directory, check=True, capture_output=True)
-            return jsonify({'status': 'success', 'output': result.stdout.decode()}), 200
+                # Pull latest changes from the repository
+                result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=service_directory, check=True, capture_output=True)
+                # Build the new image
+                build_result = subprocess.run(['sudo', 'docker-compose', 'build'], cwd=service_directory, check=True, capture_output=True)
+                # Restart the service with the new image
+                result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
+            return jsonify({'status': 'success', 'output': result.stdout.decode(), 'build_output': build_result.stdout.decode()}), 200
         except subprocess.CalledProcessError as e:
             return jsonify({'status': 'error', 'message': e.stderr.decode()}), 500
 
