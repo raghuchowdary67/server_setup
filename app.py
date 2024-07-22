@@ -173,7 +173,7 @@ class ManageService(Resource):
 
         if not os.path.isdir(service_directory):
             print("File not exists")
-            return jsonify({'message': f'Directory {service_directory} does not exist.'}, 400)
+            return jsonify({'message': f'Directory {service_directory} does not exist.'}), 400
 
         try:
             output = ''
@@ -184,12 +184,14 @@ class ManageService(Resource):
                 result = subprocess.run(['sudo', 'docker-compose', 'restart'], cwd=service_directory, check=True, capture_output=True)
                 output = result.stdout.decode() + result.stderr.decode()
             elif operation == 'start':
+                subprocess.run(['git', 'config', '--global', '--add', 'safe.directory'], cwd=service_directory, check=True, capture_output=True)
                 result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
                 git_output = result.stdout.decode() + result.stderr.decode()
                 result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
                 output = git_output + result.stdout.decode() + result.stderr.decode()
             elif operation == 'update':
                 # Pull latest changes from the repository
+                subprocess.run(['git', 'config', '--global', '--add', 'safe.directory'], cwd=service_directory, check=True, capture_output=True)
                 result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
                 git_output = result.stdout.decode() + result.stderr.decode()
                 # Build the new image
@@ -205,7 +207,7 @@ class ManageService(Resource):
                 output = git_output + build_output + stop_output + restart_output
             return jsonify({'status': 'success', 'output': str(output)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'message': e.stderr.decode()}, 500)
+            return jsonify({'message': e.stderr.decode()}), 500
 
 def update_db_credentials(new_env):
     mariadb_container = client.containers.get('mariadb')
