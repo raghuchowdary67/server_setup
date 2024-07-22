@@ -61,7 +61,7 @@ def get_system_info():
 
     # Get unique mountpoints for filtering duplicates
     seen = set()
-    relevant_mountpoints = ['/', '/home', '/mnt/newdrive']
+    relevant_mountpoints = ['/host_fs', '/host_fs/home', '/host_fs/mnt/newdrive']
 
     for part in psutil.disk_partitions():
         print(f"filesystem: {part.device}, mountpoint: {part.mountpoint}")
