@@ -11,11 +11,11 @@ fi
 # Trust the directory
 git config --global --add safe.directory "$SERVICE_DIRECTORY"
 
-echo 'Before $(pwd)...'
+echo "Before the PWD is : ${PWD}"
 # change directory
 cd $SERVICE_DIRECTORY
 
-echo 'After $(pwd)...'
+echo "After the PWD is : ${PWD}"
 
 #case $OPERATION in
 #    stop)
