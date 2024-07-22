@@ -180,8 +180,9 @@ class ManageService(Resource):
         try:
             result = subprocess.run(['/home/redbull/server_setup/manage_service.sh', folder_name, operation], check=True, capture_output=True)
             output = result.stdout.decode() + result.stderr.decode()
-            print("output: "+output)
-            return jsonify({'status': 'success', 'output': output})
+            print("output: "+str(output))
+            # return jsonify({'status': 'success', 'output': output})
+            return jsonify({'status': 'success', 'output': 'kjasdna'})
         except subprocess.CalledProcessError as e:
             return {'message': e.stderr.decode()}, 500
 
