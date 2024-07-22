@@ -21,8 +21,8 @@ system_model = api.model('SystemInfo', {
 
 docker_model = api.model('DockerStats', {
     'container_name': fields.String(required=True, description='Container name'),
-    'cpu_usage': fields.Float(required=True, description='CPU usage percentage'),
-    'memory_usage': fields.Float(required=True, description='Memory usage percentage')
+    'cpu_usage': fields.String(required=True, description='CPU usage percentage'),  # Changed to String
+    'memory_usage': fields.String(required=True, description='Memory usage percentage')  # Changed to String
 })
 
 env_model = api.model('Env', {
@@ -62,6 +62,7 @@ def get_system_info():
     # Get unique mountpoints for filtering duplicates
     seen = set()
     relevant_mountpoints = ['/', '/home', '/mnt/newdrive']
+
     for part in psutil.disk_partitions():
         if part.mountpoint in relevant_mountpoints and part.mountpoint not in seen:
             seen.add(part.mountpoint)
