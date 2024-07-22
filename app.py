@@ -167,7 +167,7 @@ class ManageService(Resource):
     def post(self):
         folder_name = request.json.get('folder_name')
         operation = request.json.get('operation')
-        service_directory = f"/home/redbull/{folder_name}"
+        service_directory = f"/home/redbull/GIT/{folder_name}"
 
         if 'server_setup' in folder_name:
             print("This folder is not supported")

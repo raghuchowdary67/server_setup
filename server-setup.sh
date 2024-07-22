@@ -14,6 +14,14 @@ if [ -z "$MYSQL_PASSWORD" ]; then
   MYSQL_PASSWORD=$(generate_random_password)
 fi
 
+# Prompt the user for MASTER_ADMIN_USER
+read -p "Enter MASTER_ADMIN_USER (default: RED1431): " MASTER_ADMIN_USER
+MASTER_ADMIN_USER=${MASTER_ADMIN_USER:-RED1431}
+
+# Prompt the user for MASTER_ADMIN_PASS
+read -p "Enter MASTER_ADMIN_PASS (default: redpass1431): " MASTER_ADMIN_PASS
+MASTER_ADMIN_PASS=${MASTER_ADMIN_PASS:-redbull_admin}
+
 # Generate random root password
 MYSQL_ROOT_PASSWORD=$(generate_random_password)
 
@@ -63,6 +71,8 @@ MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_DATABASE=rmovies_admin
 MYSQL_USER=$MYSQL_USER
 MYSQL_PASSWORD=$MYSQL_PASSWORD
+MASTER_ADMIN_USER=$MASTER_ADMIN_USER
+MASTER_ADMIN_PASS=$MASTER_ADMIN_PASS
 EOL
 
 # Clone the flask_app from GitHub
@@ -90,4 +100,6 @@ echo "Setup is complete. Here are your generated credentials:"
 echo "MYSQL_USER: $MYSQL_USER"
 echo "MYSQL_PASSWORD: $MYSQL_PASSWORD"
 echo "MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD"
+echo "MASTER_ADMIN_USER: $MASTER_ADMIN_USER"
+echo "MASTER_ADMIN_PASS: $MASTER_ADMIN_PASS"
 echo "Please store these credentials securely."
