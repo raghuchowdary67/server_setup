@@ -16,20 +16,20 @@ cd $SERVICE_DIRECTORY
 
 case $OPERATION in
     stop)
-        sudo docker-compose stop
+        docker-compose stop
         ;;
     restart)
-        sudo docker-compose restart
+        docker-compose restart
         ;;
     start)
         git pull origin master
-        sudo docker-compose up -d
+        docker-compose up -d
         ;;
     update)
         git pull origin master
-        sudo docker-compose build
-        sudo docker-compose rm -sf
-        sudo docker-compose up -d
+        docker-compose build
+        docker-compose rm -sf
+        docker-compose up -d
         ;;
     *)
         echo "Invalid operation: $OPERATION"
