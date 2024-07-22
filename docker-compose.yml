@@ -36,7 +36,7 @@ services:
           memory: '256M'
 
   server_setup:
-    build: ./server_setup
+    build: .
     container_name: server_setup
     restart: always
     volumes:

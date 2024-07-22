@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY app.py /app
 
-RUN pip install flask psutil docker
+RUN pip install flask psutil docker flask-restx
 
 CMD ["python", "app.py"]
