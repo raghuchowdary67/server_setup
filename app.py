@@ -47,7 +47,7 @@ def get_system_info():
     memory_usage = memory.percent
     disk_usage = []
     for part in psutil.disk_partitions():
-        print('part: '+str(part))
+        app.logger.info('part: '+str(part))
         if part.device.startswith('/dev'):
             usage = psutil.disk_usage(part.mountpoint)
             disk_usage.append({
@@ -179,10 +179,11 @@ class ManageService(Resource):
                 # Start the new container
                 restart_result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
                 restart_output = restart_result.stdout.decode() + restart_result.stderr.decode()
+                app.logger.info("restart_output: "+str(restart_output))
                 output = git_output + build_output + stop_output + restart_output
-            return jsonify({'status': 'success', 'output': str(output)}), 200
+            return jsonify({'status': 'success', 'output': str(output)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'status': 'error', 'message': e.stderr.decode()}), 500
+            return jsonify({'status': 'error', 'message': e.stderr.decode()})
 
 def update_db_credentials(new_env):
     mariadb_container = client.containers.get('mariadb')
