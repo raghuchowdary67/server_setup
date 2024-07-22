@@ -176,7 +176,7 @@ class ManageService(Resource):
             return {'message': f'Directory {service_directory} does not exist.'}, 400
 
         try:
-            result = subprocess.run(['./manage_service.sh', folder_name, operation], check=True, capture_output=True)
+            result = subprocess.run(['/home/redbull/server_setup/manage_service.sh', folder_name, operation], check=True, capture_output=True)
             output = result.stdout.decode() + result.stderr.decode()
             return jsonify({'status': 'success', 'output': output}), 200
         except subprocess.CalledProcessError as e:
