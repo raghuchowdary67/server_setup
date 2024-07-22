@@ -176,36 +176,9 @@ class ManageService(Resource):
             return {'message': f'Directory {service_directory} does not exist.'}, 400
 
         try:
-            output = ''
-            if operation == 'stop':
-                result = subprocess.run(['sudo', 'docker-compose', 'stop'], cwd=service_directory, check=True, capture_output=True)
-                output = result.stdout.decode() + result.stderr.decode()
-            elif operation == 'restart':
-                result = subprocess.run(['sudo', 'docker-compose', 'restart'], cwd=service_directory, check=True, capture_output=True)
-                output = result.stdout.decode() + result.stderr.decode()
-            elif operation == 'start':
-                subprocess.run(['git', 'config', '--global', '--add', 'safe.directory'], cwd=service_directory, check=True, capture_output=True)
-                result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
-                git_output = result.stdout.decode() + result.stderr.decode()
-                result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
-                output = git_output + result.stdout.decode() + result.stderr.decode()
-            elif operation == 'update':
-                # Pull latest changes from the repository
-                subprocess.run(['git', 'config', '--global', '--add', 'safe.directory'], cwd=service_directory, check=True, capture_output=True)
-                result = subprocess.run(['git', 'pull', 'origin', 'master'], cwd=service_directory, check=True, capture_output=True)
-                git_output = result.stdout.decode() + result.stderr.decode()
-                # Build the new image
-                build_result = subprocess.run(['sudo', 'docker-compose', 'build'], cwd=service_directory, check=True, capture_output=True)
-                build_output = build_result.stdout.decode() + build_result.stderr.decode()
-                # Stop and remove existing container
-                stop_result = subprocess.run(['sudo', 'docker-compose', 'rm', '-sf'], cwd=service_directory, check=True, capture_output=True)
-                stop_output = stop_result.stdout.decode() + stop_result.stderr.decode()
-                # Start the new container
-                restart_result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
-                restart_output = restart_result.stdout.decode() + restart_result.stderr.decode()
-                print("restart_output: "+str(restart_output))
-                output = git_output + build_output + stop_output + restart_output
-            return jsonify({'status': 'success', 'output': str(output)})
+            result = subprocess.run(['./manage_service.sh', folder_name, operation], check=True, capture_output=True)
+            output = result.stdout.decode() + result.stderr.decode()
+            return jsonify({'status': 'success', 'output': output}), 200
         except subprocess.CalledProcessError as e:
             return {'message': e.stderr.decode()}, 500
 
