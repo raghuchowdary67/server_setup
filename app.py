@@ -135,7 +135,7 @@ class RestartService(Resource):
             client.containers.get('mariadb').restart()
         elif service == 'redis':
             client.containers.get('redis').restart()
-        return jsonify({'status': 'success'}), 200
+        return jsonify({'status': 'success'})
 
 @ns.route('/env')
 class ManageEnv(Resource):
@@ -158,7 +158,7 @@ class ManageEnv(Resource):
             for key, value in new_env.items():
                 file.write(f'{key}={value}\n')
         update_db_credentials(new_env)
-        return jsonify({'status': 'success'}), 200
+        return jsonify({'status': 'success'})
 
 @ns.route('/service')
 class ManageService(Resource):
@@ -173,7 +173,7 @@ class ManageService(Resource):
 
         if not os.path.isdir(service_directory):
             print("File not exists")
-            return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'}), 400
+            return jsonify({'message': f'Directory {service_directory} does not exist.'}, status=400)
 
         try:
             output = ''
@@ -205,7 +205,7 @@ class ManageService(Resource):
                 output = git_output + build_output + stop_output + restart_output
             return jsonify({'status': 'success', 'output': str(output)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'status': 'error', 'message': e.stderr.decode()})
+            return jsonify({'message': e.stderr.decode()}, 400)
 
 def update_db_credentials(new_env):
     mariadb_container = client.containers.get('mariadb')
