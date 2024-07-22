@@ -154,6 +154,7 @@ class ManageService(Resource):
             return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'}), 400
 
         try:
+            output = ''
             if operation == 'stop':
                 result = subprocess.run(['sudo', 'docker-compose', 'stop'], cwd=service_directory, check=True, capture_output=True)
                 output = result.stdout.decode() + result.stderr.decode()
@@ -179,7 +180,7 @@ class ManageService(Resource):
                 restart_result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
                 restart_output = restart_result.stdout.decode() + restart_result.stderr.decode()
                 output = git_output + build_output + stop_output + restart_output
-            return jsonify({'status': 'success', 'output': output}), 200
+            return jsonify({'status': 'success', 'output': str(output)}), 200
         except subprocess.CalledProcessError as e:
             return jsonify({'status': 'error', 'message': e.stderr.decode()}), 500
 
