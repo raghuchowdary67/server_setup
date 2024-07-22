@@ -35,30 +35,60 @@ env_update_model = api.model('EnvUpdate', {
     'MYSQL_PASSWORD': fields.String(required=True, description='MySQL user password')
 })
 
+service_operation_model = api.model('ServiceOperation', {
+    'folder_name': fields.String(required=True, description='Name of the folder containing the project'),
+    'operation': fields.String(required=True, description='Operation to perform', enum=['stop', 'restart', 'start', 'update'])
+})
+
 def get_system_info():
     cpu_usage = psutil.cpu_percent(interval=1)
     memory = psutil.virtual_memory()
     memory_usage = memory.percent
-    disk_usage = {part.mountpoint: psutil.disk_usage(part.mountpoint)._asdict() for part in psutil.disk_partitions()}
+    disk_usage = []
+    for part in psutil.disk_partitions():
+        if part.device.startswith('/dev'):
+            usage = psutil.disk_usage(part.mountpoint)
+            disk_usage.append({
+                'filesystem': part.device,
+                'size': usage.total,
+                'used': usage.used,
+                'available': usage.free,
+                'percent': usage.percent,
+                'mounted_on': part.mountpoint
+            })
     return {
         'cpu_usage': cpu_usage,
         'memory_usage': memory_usage,
         'disk_usage': disk_usage
     }
 
+
 def get_docker_stats():
     containers = client.containers.list()
-    stats = {}
+    stats = []
     for container in containers:
         container_stats = container.stats(stream=False)
-        cpu_percent = (container_stats['cpu_stats']['cpu_usage']['total_usage'] - container_stats['precpu_stats']['cpu_usage']['total_usage']) / \
-                      (container_stats['cpu_stats']['system_cpu_usage'] - container_stats['precpu_stats']['system_cpu_usage']) * \
-                      len(container_stats['cpu_stats']['cpu_usage']['percpu_usage']) * 100.0
-        memory_usage = container_stats['memory_stats']['usage'] / container_stats['memory_stats']['limit'] * 100.0
-        stats[container.name] = {
+        cpu_stats = container_stats['cpu_stats']
+        precpu_stats = container_stats['precpu_stats']
+        cpu_usage = cpu_stats['cpu_usage']
+        percpu_usage = cpu_usage.get('percpu_usage', [cpu_usage['total_usage']])
+
+        if 'system_cpu_usage' in cpu_stats and 'system_cpu_usage' in precpu_stats:
+            cpu_delta = cpu_usage['total_usage'] - precpu_stats['cpu_usage']['total_usage']
+            system_cpu_delta = cpu_stats['system_cpu_usage'] - precpu_stats['system_cpu_usage']
+            number_cpus = len(percpu_usage)
+            cpu_percent = (cpu_delta / system_cpu_delta) * number_cpus * 100.0 if system_cpu_delta > 0 else 0.0
+        else:
+            cpu_percent = 0.0
+
+        memory_stats = container_stats['memory_stats']
+        memory_usage = (memory_stats['usage'] / memory_stats['limit']) * 100.0 if memory_stats['limit'] > 0 else 0.0
+
+        stats.append({
+            'container_name': container.name,
             'cpu_usage': cpu_percent,
             'memory_usage': memory_usage
-        }
+        })
     return stats
 
 @ns.route('/system')
@@ -109,6 +139,33 @@ class ManageEnv(Resource):
                 file.write(f'{key}={value}\n')
         update_db_credentials(new_env)
         return jsonify({'status': 'success'}), 200
+
+@ns.route('/service')
+class ManageService(Resource):
+    @ns.doc('manage_service')
+    @ns.expect(service_operation_model)
+    def post(self):
+        folder_name = request.json.get('folder_name')
+        operation = request.json.get('operation')
+        service_directory = f"/home/redbull/{folder_name}"
+
+        if not os.path.isdir(service_directory):
+            return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'}), 400
+
+        try:
+            if operation == 'stop':
+                result = subprocess.run(['sudo', 'docker-compose', 'stop'], cwd=service_directory, check=True, capture_output=True)
+            elif operation == 'restart':
+                result = subprocess.run(['sudo', 'docker-compose', 'restart'], cwd=service_directory, check=True, capture_output=True)
+            elif operation == 'start':
+                result = subprocess.run(['git', 'pull'], cwd=service_directory, check=True, capture_output=True)
+                result = subprocess.run(['sudo', 'docker-compose', 'up', '-d'], cwd=service_directory, check=True, capture_output=True)
+            elif operation == 'update':
+                result = subprocess.run(['git', 'pull'], cwd=service_directory, check=True, capture_output=True)
+                result = subprocess.run(['sudo', 'docker-compose', 'up', '-d', '--build'], cwd=service_directory, check=True, capture_output=True)
+            return jsonify({'status': 'success', 'output': result.stdout.decode()}), 200
+        except subprocess.CalledProcessError as e:
+            return jsonify({'status': 'error', 'message': e.stderr.decode()}), 500
 
 def update_db_credentials(new_env):
     mariadb_container = client.containers.get('mariadb')
