@@ -170,6 +170,7 @@ class ManageService(Resource):
         service_directory = f"/home/redbull/{folder_name}"
 
         if not os.path.isdir(service_directory):
+            print("file not found")
             return {'message': f'Directory {service_directory} does not exist.'}, 400
 
         try:
