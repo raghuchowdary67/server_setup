@@ -64,12 +64,9 @@ def get_system_info():
     relevant_mountpoints = ['/host_fs', '/host_fs/home', '/host_fs/mnt/newdrive']
 
     for part in psutil.disk_partitions():
-        print(f"filesystem: {part.device}, mountpoint: {part.mountpoint}")
         if part.mountpoint in relevant_mountpoints and part.mountpoint not in seen:
             seen.add(part.mountpoint)
-            print(f"filesystem: {part.device}, found")
             usage = psutil.disk_usage(part.mountpoint)
-            print(f"filesystem: {part.device}, size: {get_size(usage.total),}")
             disk_usage.append({
                 'filesystem': part.device,
                 'size': get_size(usage.total),
