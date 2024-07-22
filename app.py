@@ -173,7 +173,7 @@ class ManageService(Resource):
 
         if not os.path.isdir(service_directory):
             print("File not exists")
-            return jsonify({'message': f'Directory {service_directory} does not exist.'}, status=400)
+            return jsonify({'message': f'Directory {service_directory} does not exist.'}, 400)
 
         try:
             output = ''
@@ -205,7 +205,7 @@ class ManageService(Resource):
                 output = git_output + build_output + stop_output + restart_output
             return jsonify({'status': 'success', 'output': str(output)})
         except subprocess.CalledProcessError as e:
-            return jsonify({'message': e.stderr.decode()}, 400)
+            return jsonify({'message': e.stderr.decode()}, 500)
 
 def update_db_credentials(new_env):
     mariadb_container = client.containers.get('mariadb')
