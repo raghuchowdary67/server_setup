@@ -166,9 +166,12 @@ class ManageService(Resource):
         folder_name = request.json.get('folder_name')
         operation = request.json.get('operation')
         service_directory = f"/home/redbull/{folder_name}"
+        print("service_directory: "+service_directory)
+        print("operation: "+operation)
 
         if not os.path.isdir(service_directory):
-            return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'}), 400
+            print("File not exists")
+            return jsonify({'status': 'error', 'message': f'Directory {service_directory} does not exist.'})
 
         try:
             output = ''
