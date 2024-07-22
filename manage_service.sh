@@ -17,25 +17,25 @@ cd $SERVICE_DIRECTORY
 
 echo 'After $(pwd)...'
 
-case $OPERATION in
-    stop)
-        docker-compose stop $FOLDER_NAME
-        ;;
-    restart)
-        docker-compose restart $FOLDER_NAME
-        ;;
-    start)
-        git pull origin master
-        docker-compose up -d $FOLDER_NAME
-        ;;
-    update)
-        git pull origin master
-        docker-compose build $FOLDER_NAME
-        docker-compose rm -sf $FOLDER_NAME
-        docker-compose up -d $FOLDER_NAME
-        ;;
-    *)
-        echo "Invalid operation: $OPERATION"
-        exit 1
-        ;;
-esac
+#case $OPERATION in
+#    stop)
+#        docker-compose stop $FOLDER_NAME
+#        ;;
+#    restart)
+#        docker-compose restart $FOLDER_NAME
+#        ;;
+#    start)
+#        git pull origin master
+#        docker-compose up -d $FOLDER_NAME
+#        ;;
+#    update)
+#        git pull origin master
+#        docker-compose build $FOLDER_NAME
+#        docker-compose rm -sf $FOLDER_NAME
+#        docker-compose up -d $FOLDER_NAME
+#        ;;
+#    *)
+#        echo "Invalid operation: $OPERATION"
+#        exit 1
+#        ;;
+#esac
