@@ -25,11 +25,11 @@ case $OPERATION in
         nohup docker-compose restart $FOLDER_NAME > /dev/null 2>&1 &
         ;;
     start)
-        git pull origin master
+        git pull origin main
         nohup docker-compose up -d $FOLDER_NAME > /dev/null 2>&1 &
         ;;
     update)
-        git pull origin master
+        git pull origin main
         docker-compose build $FOLDER_NAME &&
         docker-compose rm -sf $FOLDER_NAME &&
         docker-compose up -d $FOLDER_NAME
