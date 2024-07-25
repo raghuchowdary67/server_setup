@@ -11,7 +11,7 @@ services:
       timeout: 10s
       retries: 5
     env_file:
-      - /home/secrets/.env
+      - ${HOME}/secrets/.env
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init.sql file
@@ -41,8 +41,8 @@ services:
       - redis
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/secrets/.env:/home/secrets/.env  # Mount the .env file
-      - /home/redbull:/home/redbull            # Mount the /home/redbull directory
+      - ${HOME}/secrets/.env:${HOME}/secrets/.env  # Mount the .env file
+      - ${HOME}:${HOME}            # Mount the /home/redbull directory
       - /:/host_fs  # Add this line to bind mount the host root
     ports:
       - "5000:5000"
@@ -53,10 +53,10 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/docker-volumes/mariadb
+      device: ${HOME}/docker-volumes/mariadb
   redis_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/docker-volumes/redis
+      device: ${HOME}/docker-volumes/redis

@@ -10,6 +10,7 @@ api = Api(app, version='1.0', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
+home = os.environ.get("HOME", "/home/redbull")
 
 ns = api.namespace('monitor', description='Monitoring operations')
 
@@ -142,7 +143,7 @@ class ManageEnv(Resource):
     @ns.doc('get_env')
     @ns.marshal_with(env_model)
     def get(self):
-        env_file = '/home/secrets/.env'
+        env_file = f'/{home}/secrets/.env'
         if not os.path.exists(env_file):
             return {'env': 'No environment file found.'}, 404
         with open(env_file, 'r') as file:
@@ -153,7 +154,7 @@ class ManageEnv(Resource):
     @ns.expect(env_update_model)
     def post(self):
         new_env = request.json
-        env_file = '/home/secrets/.env'
+        env_file = f'/{home}/secrets/.env'
         with open(env_file, 'w') as file:
             for key, value in new_env.items():
                 file.write(f'{key}={value}\n')
@@ -167,7 +168,7 @@ class ManageService(Resource):
     def post(self):
         folder_name = request.json.get('folder_name')
         operation = request.json.get('operation')
-        service_directory = f"/home/redbull/GIT/{folder_name}"
+        service_directory = f"{home}/GIT/{folder_name}"
 
         if 'server_setup' in folder_name:
             print("This folder is not supported")
@@ -178,7 +179,7 @@ class ManageService(Resource):
             return {'message': f'Directory {service_directory} does not exist.'}, 400
 
         try:
-            result = subprocess.run(['/home/redbull/server_setup/manage_service.sh', folder_name, operation], check=True, capture_output=True)
+            result = subprocess.run([f'{home}/server_setup/manage_service.sh', folder_name, operation], check=True, capture_output=True)
             output = result.stdout.decode() + result.stderr.decode()
             print("output: "+str(output))
             return jsonify({'status': 'success', 'output': output})

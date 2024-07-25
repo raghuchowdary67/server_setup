@@ -1,7 +1,7 @@
 #!/bin/bash
 FOLDER_NAME=$1
 OPERATION=$2
-SERVICE_DIRECTORY="/home/redbull/$FOLDER_NAME"
+SERVICE_DIRECTORY="$HOME/$FOLDER_NAME"
 
 if [ ! -d "$SERVICE_DIRECTORY" ]; then
     echo "Directory $SERVICE_DIRECTORY does not exist."
