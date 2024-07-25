@@ -60,25 +60,45 @@ while true; do
   esac
 done
 
-# Common code to install necessary packages
-echo "Updating and installing necessary packages..."
-sudo apt update
-sudo apt upgrade -y
-sudo apt install -y curl apt-transport-https ca-certificates software-properties-common gnupg-agent git
+# Function to update and install packages using apt
+install_apt_packages() {
+  echo "Updating and installing necessary packages with apt..."
+  sudo apt update
+  sudo apt upgrade -y
+  sudo apt install -y curl apt-transport-https ca-certificates software-properties-common gnupg-agent git
+}
 
-# Install Docker
+# Function to update and install packages using yum
+install_yum_packages() {
+  echo "Updating and installing necessary packages with yum..."
+  sudo yum update -y
+  sudo yum install -y curl yum-utils device-mapper-persistent-data lvm2 git
+}
+
+# Install necessary packages based on the instance type
+if [ "$INSTANCE_TYPE" == "EC2" ]; then
+  install_yum_packages
+else
+  install_apt_packages
+fi
+
+# Common Docker installation steps
 echo "Installing Docker..."
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-   $(lsb_release -cs) \
-   stable"
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io
-
-# Enable Docker service to start on boot
-echo "Enabling Docker service to start on boot..."
-sudo systemctl enable docker
+if [ "$INSTANCE_TYPE" == "EC2" ]; then
+  sudo yum install -y docker
+  sudo systemctl start docker
+  sudo systemctl enable docker
+else
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+  sudo add-apt-repository \
+     "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+     $(lsb_release -cs) \
+     stable"
+  sudo apt update
+  sudo apt install -y docker-ce docker-ce-cli containerd.io
+  sudo systemctl start docker
+  sudo systemctl enable docker
+fi
 
 # Install Docker Compose
 echo "Installing Docker Compose..."
@@ -231,6 +251,3 @@ EOL
 else
   echo "INSTANCE_TYPE is not EC2. Skipping EC2 specific setup."
 fi
-
-
-
