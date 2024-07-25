@@ -107,34 +107,43 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 # Create secrets directory and the .env file
 SECRETS_DIR="$HOME/secrets"
-mkdir -p $SECRETS_DIR
+mkdir -p "$SECRETS_DIR"
 
 # Get the public IP address
 SYSTEM_IP4_IP=$(curl -s http://checkip.amazonaws.com)
 
 # Write environment variables to the .env file
 echo "Creating .env file with credentials..."
-cat <<EOL | sudo tee $SECRETS_DIR/.env > /dev/null
+cat <<EOL | sudo tee "$SECRETS_DIR"/.env > /dev/null
 INSTANCE_TYPE=$INSTANCE_TYPE
 SYSTEM_TYPE=$SYSTEM_TYPE
 SYSTEM_IP4_IP=$SYSTEM_IP4_IP
 EOL
 
-# Prompt the user for email address for SSH key generation
-DEFAULT_EMAIL="your_email@example.com"
-read -r -p "Enter your email address for SSH key generation (default: $DEFAULT_EMAIL): " USER_EMAIL
-USER_EMAIL=${USER_EMAIL:-$DEFAULT_EMAIL}
-
-# Generate SSH keys
-echo "Generating SSH keys..."
-ssh-keygen -t rsa -b 4096 -C "$USER_EMAIL" -f ~/.ssh/id_rsa -N ""
-
-# Print SSH public key
-echo "Your SSH public key (add this to your GitHub account):"
-cat ~/.ssh/id_rsa.pub
-
-echo "Setup complete. Please add the above SSH public key to your GitHub account and press Enter to continue."
-read -r -p "Press Enter to continue after adding the SSH key to GitHub..."
+while true; do
+  read -r -p "Do you want to generate SSH keys? (y/n): " GENERATE_SSH
+  case $GENERATE_SSH in
+    [Yy]* )
+      DEFAULT_EMAIL="your_email@example.com"
+      read -r -p "Enter your email address for SSH key generation (default: $DEFAULT_EMAIL): " USER_EMAIL
+      USER_EMAIL=${USER_EMAIL:-$DEFAULT_EMAIL}
+      echo "Generating SSH keys..."
+      ssh-keygen -t rsa -b 4096 -C "$USER_EMAIL" -f ~/.ssh/id_rsa -N ""
+      echo "Your SSH public key (add this to your GitHub account):"
+      cat ~/.ssh/id_rsa.pub
+      echo "Setup complete. Please add the above SSH public key to your GitHub account and press Enter to continue."
+      read -r -p "Press Enter to continue after adding the SSH key to GitHub..."
+      break
+      ;;
+    [Nn]* )
+      echo "Skipping SSH key generation."
+      break
+      ;;
+    * )
+      echo "Please answer yes or no."
+      ;;
+  esac
+done
 
 # Additional setup for Main Server
 if [ "$SYSTEM_TYPE" == "Main Server" ]; then
@@ -160,11 +169,11 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
 
   # Create Docker volumes for MariaDB and Redis in /home partition
   echo "Creating Docker volumes for MariaDB and Redis..."
-  mkdir -p $HOME/docker-volumes/mariadb
-  mkdir -p $HOME/docker-volumes/redis
+  mkdir -p "$HOME"/docker-volumes/mariadb
+  mkdir -p "$HOME"/docker-volumes/redis
 
   # Append database credentials to the .env file
-  cat <<EOL | sudo tee -a $SECRETS_DIR/.env > /dev/null
+  cat <<EOL | sudo tee -a "$SECRETS_DIR"/.env > /dev/null
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_DATABASE=rmovies_admin
 MYSQL_USER=$MYSQL_USER
@@ -175,11 +184,11 @@ EOL
 
   # Clone the flask_app from GitHub
   echo "Cloning Flask app from GitHub..."
-  git clone https://github.com/raghuchowdary67/server_setup.git $HOME/server_setup
+  git clone https://github.com/raghuchowdary67/server_setup.git "$HOME"/server_setup
 
   # Start Docker Compose
   echo "Starting Docker Compose..."
-  cd $HOME/server_setup || exit
+  cd "$HOME"/server_setup || exit
   sudo docker-compose up -d
 
   # Display generated credentials
@@ -203,11 +212,10 @@ if [ "$INSTANCE_TYPE" == "EC2" ]; then
   # Install Python and create virtual environment
   sudo yum install python3 -y
   sudo yum install python3-pip -y
-  sudo yum install python3-venv -y
 
   # Create and activate virtual environment
-  python3 -m venv $HOME/monitoring_env
-  source $HOME/monitoring_env/bin/activate
+  python3 -m venv "$HOME"/monitoring_env
+  source "$HOME"/monitoring_env/bin/activate
 
   # Install psutil
   pip3 install psutil boto3
