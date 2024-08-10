@@ -48,58 +48,57 @@ def get_system_stats():
 # Determine if this is running on EC2
 is_ec2 = len(sys.argv) > 1 and sys.argv[1].lower() == 'ec2'
 
-if is_ec2:
+def get_billing_period():
+    """Get the current AWS billing period."""
+    now = datetime.utcnow()
+    start = datetime(now.year, now.month, 1)
+    end = start + timedelta(days=32)
+    end = datetime(end.year, end.month, 1)
+    return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+
+def get_aws_bandwidth_usage(ec2_instance_id):
+    """Get AWS EC2 instance bandwidth usage."""
     import boto3  # Only import boto3 if running on EC2
 
-    def get_billing_period():
-        """Get the current AWS billing period."""
-        now = datetime.utcnow()
-        start = datetime(now.year, now.month, 1)
-        end = start + timedelta(days=32)
-        end = datetime(end.year, end.month, 1)
-        return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
+    cloudwatch = boto3.client('cloudwatch', 'us-east-1')
 
-    def get_aws_bandwidth_usage(ec2_instance_id):
-        """Get AWS EC2 instance bandwidth usage."""
-        cloudwatch = boto3.client('cloudwatch', 'us-east-1')
+    def get_metric_sum(metric_name):
+        start, end = get_billing_period()
+        response = cloudwatch.get_metric_statistics(
+            Namespace='AWS/EC2',
+            MetricName=metric_name,
+            Dimensions=[
+                {
+                    'Name': 'InstanceId',
+                    'Value': ec2_instance_id
+                },
+            ],
+            StartTime=start,
+            EndTime=end,
+            Period=86400,
+            Statistics=['Sum'],
+            Unit='Bytes'
+        )
+        data_points = response['Datapoints']
+        return sum(dp['Sum'] for dp in data_points)
 
-        def get_metric_sum(metric_name):
-            start, end = get_billing_period()
-            response = cloudwatch.get_metric_statistics(
-                Namespace='AWS/EC2',
-                MetricName=metric_name,
-                Dimensions=[
-                    {
-                        'Name': 'InstanceId',
-                        'Value': ec2_instance_id
-                    },
-                ],
-                StartTime=start,
-                EndTime=end,
-                Period=86400,
-                Statistics=['Sum'],
-                Unit='Bytes'
-            )
-            data_points = response['Datapoints']
-            return sum(dp['Sum'] for dp in data_points)
+    network_in = get_metric_sum('NetworkIn')
+    network_out = get_metric_sum('NetworkOut')
+    total_bandwidth = network_in + network_out
+    return total_bandwidth
 
-        network_in = get_metric_sum('NetworkIn')
-        network_out = get_metric_sum('NetworkOut')
-        total_bandwidth = network_in + network_out
-        return total_bandwidth
-
-    def get_instance_id():
-        try:
-            result = subprocess.run(['ec2-metadata', '--instance-id'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    text=True)
-            if result.returncode == 0:
-                return result.stdout.strip().split(": ")[1]
-            else:
-                print(f"Error fetching instance ID: {result.stderr}")
-                return None
-        except Exception as e:
-            print(f"Unable to fetch instance ID: {e}")
+def get_instance_id():
+    try:
+        result = subprocess.run(['ec2-metadata', '--instance-id'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True)
+        if result.returncode == 0:
+            return result.stdout.strip().split(": ")[1]
+        else:
+            print(f"Error fetching instance ID: {result.stderr}")
             return None
+    except Exception as e:
+        print(f"Unable to fetch instance ID: {e}")
+        return None
 
 # Ensure the reports directory exists
 reports_dir = os.path.join(home, "reports")
@@ -114,6 +113,7 @@ prev_sent, prev_recv = get_network_stats()
 # Initial total data usage
 initial_sent = prev_sent
 initial_recv = prev_recv
+instance_id = None
 
 if is_ec2:
     aws_cache_duration = 600
@@ -121,17 +121,40 @@ if is_ec2:
     total_bandwidth_used = 0
     instance_id = get_instance_id()
 
-if not is_ec2 or instance_id:
-    while True:
-        current_time = time.time()
-
-        if is_ec2:
-            # Update AWS bandwidth usage if cache duration has passed
+    if instance_id:
+        while True:
+            current_time = time.time()
             if current_time - last_aws_update >= aws_cache_duration:
                 total_bandwidth_used = get_aws_bandwidth_usage(instance_id)
-                print(convert_size(total_bandwidth_used))
                 last_aws_update = current_time
 
+            current_sent, current_recv = get_network_stats()
+            cpu_usage, mem_usage = get_system_stats()
+
+            sent_speed = (current_sent - prev_sent) / 1024  # KB/s
+            recv_speed = (current_recv - prev_recv) / 1024  # KB/s
+
+            total_sent = current_sent - initial_sent
+            total_recv = current_recv - initial_recv
+
+            prev_sent, prev_recv = current_sent, current_recv
+            with open(file_path, 'w') as file:
+                fcntl.flock(file, fcntl.LOCK_EX)
+                file.write(f"CPU Usage: {cpu_usage:.2f}%\n")
+                file.write(f"Memory Usage: {mem_usage:.2f}%\n")
+                file.write(f"Current Upload Speed: {convert_size(sent_speed * 1024)}/s, Current Download Speed: {convert_size(recv_speed * 1024)}/s\n")
+                file.write(f"Instance Total Upload: {convert_size(total_sent)}, Instance Total Download: {convert_size(total_recv)}\n")
+                file.write(f"AWS Monthly Total Bandwidth Used: {convert_size(total_bandwidth_used)}\n")
+                fcntl.flock(file, fcntl.LOCK_UN)
+
+            time.sleep(1)
+    else:
+        print("No instance ID was found....")
+        with open(file_path, 'w') as file:
+            file.write("No instance ID was found....")
+
+else:
+    while True:
         current_sent, current_recv = get_network_stats()
         cpu_usage, mem_usage = get_system_stats()
 
@@ -146,17 +169,8 @@ if not is_ec2 or instance_id:
             fcntl.flock(file, fcntl.LOCK_EX)
             file.write(f"CPU Usage: {cpu_usage:.2f}%\n")
             file.write(f"Memory Usage: {mem_usage:.2f}%\n")
-            file.write(
-                f"Current Upload Speed: {convert_size(sent_speed * 1024)}/s, Current Download Speed: {convert_size(recv_speed * 1024)}/s\n")
-            file.write(f"Current Instance session Total upload and Downloaded Data\n")
-            file.write(
-                f"Instance Total Upload: {convert_size(total_sent)}, Instance Total Download: {convert_size(total_recv)}\n")
-            if is_ec2:
-                file.write(f"AWS Monthly Total Bandwidth Used: {convert_size(total_bandwidth_used)}\n")
+            file.write(f"Current Upload Speed: {convert_size(sent_speed * 1024)}/s, Current Download Speed: {convert_size(recv_speed * 1024)}/s\n")
+            file.write(f"Instance Total Upload: {convert_size(total_sent)}, Instance Total Download: {convert_size(total_recv)}\n")
             fcntl.flock(file, fcntl.LOCK_UN)
 
         time.sleep(1)
-else:
-    print("No instance id was found....")
-    with open(file_path, 'w') as file:
-        file.write("No instance id was found....")
