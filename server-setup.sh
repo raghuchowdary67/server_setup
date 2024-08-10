@@ -207,8 +207,10 @@ elif [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
   # Add Tunnel/Proxy specific setup here
 fi
 
-# Additional setup for EC2 instance
+# Determine instance type
 if [ "$INSTANCE_TYPE" == "EC2" ]; then
+  echo "Setting up for EC2 instance..."
+
   # Install Python and create virtual environment
   sudo yum install python3 -y
   sudo yum install python3-pip -y
@@ -217,31 +219,55 @@ if [ "$INSTANCE_TYPE" == "EC2" ]; then
   python3 -m venv "$HOME"/monitoring_env
   source "$HOME"/monitoring_env/bin/activate
 
-  # Install psutil
+  # Install necessary Python packages
   pip3 install psutil boto3
 
-  # Clone the flask_app from GitHub
-  echo "Downloading the network monitor file..."
-  GITHUB_URL="https://raw.githubusercontent.com/raghuchowdary67/server_setup/main/ec2_network_monitor.py"
+  # Set the environment variable for EC2
+  ENV_TYPE="ec2"
 
-  # Destination path
-  DESTINATION_PATH="$HOME/ec2_network_monitor.py"
+else
+  echo "Setting up for regular Ubuntu server..."
 
-  # Download the file
-  curl -o "$DESTINATION_PATH" "$GITHUB_URL"
+  # Install Python and create virtual environment
+  sudo apt-get update
+  sudo apt-get install python3 -y
+  sudo apt-get install python3-venv -y
+  sudo apt-get install python3-pip -y
 
-  # Make the script executable
-  chmod +x "$DESTINATION_PATH"
+  # Create and activate virtual environment
+  python3 -m venv "$HOME"/monitoring_env
+  source "$HOME"/monitoring_env/bin/activate
 
-  # Create systemd service file
-  SERVICE_FILE="/etc/systemd/system/ec2_network_monitor.service"
-  sudo bash -c "cat > $SERVICE_FILE" <<EOL
+  # Install necessary Python packages
+  pip3 install psutil
+
+  # Set the environment variable for non-EC2
+  ENV_TYPE=""
+
+fi
+
+# Download the network monitor script from GitHub
+echo "Downloading the network monitor script..."
+GITHUB_URL="https://raw.githubusercontent.com/raghuchowdary67/server_setup/main/network_monitor.py"
+
+# Destination path
+DESTINATION_PATH="$HOME/network_monitor.py"
+
+# Download the file
+curl -o "$DESTINATION_PATH" "$GITHUB_URL"
+
+# Make the script executable
+chmod +x "$DESTINATION_PATH"
+
+# Create systemd service file
+SERVICE_FILE="/etc/systemd/system/network_monitor.service"
+sudo bash -c "cat > $SERVICE_FILE" <<EOL
 [Unit]
-Description=EC2 Network Monitor
+Description=Network Monitor
 After=network.target
 
 [Service]
-ExecStart=$HOME/monitoring_env/bin/python3 $DESTINATION_PATH
+ExecStart=$HOME/monitoring_env/bin/python3 $DESTINATION_PATH $ENV_TYPE
 Restart=always
 User=$(whoami)
 Environment=PYTHONUNBUFFERED=1
@@ -250,12 +276,10 @@ Environment=PYTHONUNBUFFERED=1
 WantedBy=multi-user.target
 EOL
 
-  # Reload systemd, enable and start the service
-  sudo systemctl daemon-reload
-  sudo systemctl enable ec2_network_monitor.service
-  sudo systemctl start ec2_network_monitor.service
+# Reload systemd, enable and start the service
+sudo systemctl daemon-reload
+sudo systemctl enable network_monitor.service
+sudo systemctl start network_monitor.service
 
-  echo "EC2 Network Monitor setup complete and started."
-else
-  echo "INSTANCE_TYPE is not EC2. Skipping EC2 specific setup."
-fi
+echo "Network Monitor setup complete and started."
+

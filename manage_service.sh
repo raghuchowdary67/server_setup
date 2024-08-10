@@ -1,4 +1,5 @@
 #!/bin/bash
+# chmod +x manage_service.sh
 FOLDER_NAME=$1
 OPERATION=$2
 SERVICE_DIRECTORY="$HOME/$FOLDER_NAME"
