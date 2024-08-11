@@ -8,6 +8,7 @@ import math
 from datetime import datetime, timedelta
 import subprocess
 import sys
+import json
 
 home = os.environ.get("HOME", "/home/redbull")
 
@@ -100,61 +101,27 @@ def get_instance_id():
         print(f"Unable to fetch instance ID: {e}")
         return None
 
-# Ensure the reports directory exists
-reports_dir = os.path.join(home, "reports")
-os.makedirs(reports_dir, exist_ok=True)
+def write_json(file_path, data):
+    with open(file_path, 'w') as file:
+        fcntl.flock(file, fcntl.LOCK_EX)
+        json.dump(data, file, indent=4)
+        fcntl.flock(file, fcntl.LOCK_UN)
 
-# File to store stats
-file_path = os.path.join(reports_dir, "system_network_usage.txt")
-
-# Previous values for calculating speed
-prev_sent, prev_recv = get_network_stats()
-
-# Initial total data usage
-initial_sent = prev_sent
-initial_recv = prev_recv
-instance_id = None
-
-if is_ec2:
+def generate_metrics(is_ec2, file_path, instance_id=None):
     aws_cache_duration = 600
     last_aws_update = time.time() - aws_cache_duration  # Force immediate update on first run
     total_bandwidth_used = 0
-    instance_id = get_instance_id()
 
-    if instance_id:
-        while True:
-            current_time = time.time()
-            if current_time - last_aws_update >= aws_cache_duration:
-                total_bandwidth_used = get_aws_bandwidth_usage(instance_id)
-                last_aws_update = current_time
+    prev_sent, prev_recv = get_network_stats()
+    initial_sent = prev_sent
+    initial_recv = prev_recv
 
-            current_sent, current_recv = get_network_stats()
-            cpu_usage, mem_usage = get_system_stats()
-
-            sent_speed = (current_sent - prev_sent) / 1024  # KB/s
-            recv_speed = (current_recv - prev_recv) / 1024  # KB/s
-
-            total_sent = current_sent - initial_sent
-            total_recv = current_recv - initial_recv
-
-            prev_sent, prev_recv = current_sent, current_recv
-            with open(file_path, 'w') as file:
-                fcntl.flock(file, fcntl.LOCK_EX)
-                file.write(f"CPU Usage: {cpu_usage:.2f}%\n")
-                file.write(f"Memory Usage: {mem_usage:.2f}%\n")
-                file.write(f"Current Upload Speed: {convert_size(sent_speed * 1024)}/s, Current Download Speed: {convert_size(recv_speed * 1024)}/s\n")
-                file.write(f"Instance Total Upload: {convert_size(total_sent)}, Instance Total Download: {convert_size(total_recv)}\n")
-                file.write(f"AWS Monthly Total Bandwidth Used: {convert_size(total_bandwidth_used)}\n")
-                fcntl.flock(file, fcntl.LOCK_UN)
-
-            time.sleep(1)
-    else:
-        print("No instance ID was found....")
-        with open(file_path, 'w') as file:
-            file.write("No instance ID was found....")
-
-else:
     while True:
+        current_time = time.time()
+        if is_ec2 and instance_id and current_time - last_aws_update >= aws_cache_duration:
+            total_bandwidth_used = get_aws_bandwidth_usage(instance_id)
+            last_aws_update = current_time
+
         current_sent, current_recv = get_network_stats()
         cpu_usage, mem_usage = get_system_stats()
 
@@ -165,12 +132,46 @@ else:
         total_recv = current_recv - initial_recv
 
         prev_sent, prev_recv = current_sent, current_recv
-        with open(file_path, 'w') as file:
-            fcntl.flock(file, fcntl.LOCK_EX)
-            file.write(f"CPU Usage: {cpu_usage:.2f}%\n")
-            file.write(f"Memory Usage: {mem_usage:.2f}%\n")
-            file.write(f"Current Upload Speed: {convert_size(sent_speed * 1024)}/s, Current Download Speed: {convert_size(recv_speed * 1024)}/s\n")
-            file.write(f"Instance Total Upload: {convert_size(total_sent)}, Instance Total Download: {convert_size(total_recv)}\n")
-            fcntl.flock(file, fcntl.LOCK_UN)
 
+        data = {
+            "cpu_percent": cpu_usage,
+            "memory_percent": mem_usage,
+            "current_upload_speed": f"{convert_size(sent_speed * 1024)}/s",
+            "current_download_speed": f"{convert_size(recv_speed * 1024)}/s",
+            "instance_total_upload": convert_size(total_sent),
+            "instance_total_download": convert_size(total_recv)
+        }
+
+        if is_ec2:
+            data["aws_monthly_total_bandwidth_used"] = convert_size(total_bandwidth_used)
+
+        write_json(file_path, data)
         time.sleep(1)
+
+# Ensure the reports directory exists
+reports_dir = os.path.join(home, "reports")
+os.makedirs(reports_dir, exist_ok=True)
+
+# File to store stats
+file_path = os.path.join(reports_dir, "system_network_usage.json")
+
+# Previous values for calculating speed
+prev_sent, prev_recv = get_network_stats()
+
+# Initial total data usage
+initial_sent = prev_sent
+initial_recv = prev_recv
+instance_id = None
+
+if is_ec2:
+    instance_id = get_instance_id()
+
+    if instance_id:
+        generate_metrics(is_ec2, file_path, instance_id)
+    else:
+        print("No instance ID was found....")
+        with open(file_path, 'w') as file:
+            json.dump({"error": "No instance ID was found...."}, file, indent=4)
+
+else:
+    generate_metrics(is_ec2, file_path)
