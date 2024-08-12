@@ -10,7 +10,7 @@ api = Api(app, version='1.0', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
-home = os.environ.get("HOME", "/home/redbull")
+home = "/home/redbull"
 
 ns = api.namespace('monitor', description='Monitoring operations')
 

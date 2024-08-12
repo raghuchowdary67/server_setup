@@ -41,8 +41,8 @@ services:
       - redis
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOME}/secrets/.env:${HOME}/secrets/.env  # Mount the .env file
-      - ${HOME}:${HOME}            # Mount the /home/redbull directory
+      - ${HOME}/secrets/.env:/home/redbull/secrets/.env  # Mount the .env file
+      - ${HOME}:/home/redbull
       - /:/host_fs  # Add this line to bind mount the host root
     ports:
       - "5000:5000"

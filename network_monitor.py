@@ -10,7 +10,8 @@ import subprocess
 import sys
 import json
 
-home = os.environ.get("HOME", "/home/redbull")
+home = os.environ.get("HOME")
+print("Home directory is: "+home)
 
 def convert_size(size_bytes):
     """
@@ -47,7 +48,7 @@ def get_system_stats():
     return server_cpu_usage, server_mem_usage
 
 # Determine if this is running on EC2
-is_ec2 = len(sys.argv) > 1 and sys.argv[1].lower() == 'ec2'
+is_ec2 = len(sys.argv) > 1 and sys.argv[1].lower().startswith('ec2_')
 
 def get_billing_period():
     """Get the current AWS billing period."""
@@ -101,37 +102,37 @@ def get_instance_id():
         print(f"Unable to fetch instance ID: {e}")
         return None
 
-def write_json(file_path, data):
-    with open(file_path, 'w') as file:
-        fcntl.flock(file, fcntl.LOCK_EX)
-        json.dump(data, file, indent=4)
-        fcntl.flock(file, fcntl.LOCK_UN)
+def write_json(usage_file_path, data):
+    with open(usage_file_path, 'w') as usage_file:
+        fcntl.flock(usage_file, fcntl.LOCK_EX)
+        json.dump(data, usage_file, indent=4)
+        fcntl.flock(usage_file, fcntl.LOCK_UN)
 
-def generate_metrics(is_ec2, file_path, instance_id=None):
+def generate_metrics(is_ec2_instance, usage_file_path, ec2_instance_id=None):
     aws_cache_duration = 600
     last_aws_update = time.time() - aws_cache_duration  # Force immediate update on first run
     total_bandwidth_used = 0
 
-    prev_sent, prev_recv = get_network_stats()
-    initial_sent = prev_sent
-    initial_recv = prev_recv
+    current_prev_sent, current_prev_recv = get_network_stats()
+    current_initial_sent = current_prev_sent
+    current_initial_recv = current_prev_recv
 
     while True:
         current_time = time.time()
-        if is_ec2 and instance_id and current_time - last_aws_update >= aws_cache_duration:
-            total_bandwidth_used = get_aws_bandwidth_usage(instance_id)
+        if is_ec2_instance and ec2_instance_id and current_time - last_aws_update >= aws_cache_duration:
+            total_bandwidth_used = get_aws_bandwidth_usage(ec2_instance_id)
             last_aws_update = current_time
 
         current_sent, current_recv = get_network_stats()
         cpu_usage, mem_usage = get_system_stats()
 
-        sent_speed = (current_sent - prev_sent) / 1024  # KB/s
-        recv_speed = (current_recv - prev_recv) / 1024  # KB/s
+        sent_speed = (current_sent - current_prev_sent) / 1024  # KB/s
+        recv_speed = (current_recv - current_prev_recv) / 1024  # KB/s
 
-        total_sent = current_sent - initial_sent
-        total_recv = current_recv - initial_recv
+        total_sent = current_sent - current_initial_sent
+        total_recv = current_recv - current_initial_recv
 
-        prev_sent, prev_recv = current_sent, current_recv
+        current_prev_sent, current_prev_recv = current_sent, current_recv
 
         data = {
             "cpu_percent": cpu_usage,
@@ -142,10 +143,10 @@ def generate_metrics(is_ec2, file_path, instance_id=None):
             "instance_total_download": convert_size(total_recv)
         }
 
-        if is_ec2:
+        if is_ec2_instance:
             data["aws_monthly_total_bandwidth_used"] = convert_size(total_bandwidth_used)
 
-        write_json(file_path, data)
+        write_json(usage_file_path, data)
         time.sleep(1)
 
 # Ensure the reports directory exists
