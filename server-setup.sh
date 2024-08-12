@@ -205,6 +205,7 @@ setup_python_env() {
   local env_type=$1
 
   if [ "$env_type" == "EC2_AMI" ]; then
+    echo "Python installing for EC2_AMI"
     if ! command -v python3 &> /dev/null; then
       sudo yum install python3 -y
       sudo yum install python3-pip -y
@@ -212,6 +213,7 @@ setup_python_env() {
       echo "Python is already installed."
     fi
   else
+    echo "Python installing for $env_type"
     if ! command -v python3 &> /dev/null; then
       sudo apt-get update
       sudo apt-get install python3 -y
@@ -225,7 +227,13 @@ setup_python_env() {
   if [ ! -d "$HOME/server_setup/monitoring_env" ]; then
     python3 -m venv "$HOME/server_setup/monitoring_env"
     source "$HOME/server_setup/monitoring_env/bin/activate"
-    pip3 install psutil ${env_type:+boto3}
+    # Install psutil
+    pip3 install psutil
+
+    # Install boto3 only if env_type contains EC2_
+    if [[ "$env_type" == EC2_* ]]; then
+      pip3 install boto3
+    fi
   else
     echo "Virtual environment already exists."
     source "$HOME/server_setup/monitoring_env/bin/activate"
@@ -240,7 +248,7 @@ setup_network_monitor_script() {
     DESTINATION_PATH="$HOME/server_setup/network_monitor.py"
   else
     GITHUB_URL="https://raw.githubusercontent.com/raghuchowdary67/server_setup/main/network_monitor.py"
-    DESTINATION_PATH="$HOME/network_monitor.py"
+    DESTINATION_PATH="$HOME/server_setup/network_monitor.py"
     if [ -f "$DESTINATION_PATH" ]; then
       read -r -p "The network monitor script already exists. Do you want to overwrite it? (y/n): " OVERWRITE_SCRIPT
       if [[ "$OVERWRITE_SCRIPT" =~ ^[Yy]$ ]]; then
@@ -317,16 +325,22 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
   fi
 
   # Clone the flask_app from GitHub
-  echo "Cloning Flask app from GitHub..."
-  git clone https://github.com/raghuchowdary67/server_setup.git "$HOME"/server_setup
+  echo "Cloning server_setup app from GitHub..."
+  if [ -d "$HOME/server_setup/.git" ]; then
+    echo "Repository already exists. Pulling latest changes..."
+    git -C "$HOME/server_setup" pull
+  else
+    echo "Repo doesn't exists so Cloning server_setup from GitHub..."
+    git clone https://github.com/raghuchowdary67/server_setup.git "$HOME/server_setup"
+  fi
 
-  # Start Docker Compose
-  echo "Starting Docker Compose..."
   cd "$HOME"/server_setup || exit
-  sudo docker-compose up -d
-
+  echo "Setting Venv and starting network usage script..."
   setup_python_env "$INSTANCE_TYPE"
   setup_network_monitor_script "clone"
+  # Start Docker Compose
+#  echo "Starting Docker Compose..."
+#  sudo docker-compose up -d
 
 elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
   setup_network_monitor_script "download"

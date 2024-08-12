@@ -145,9 +145,11 @@ def generate_metrics(is_ec2_instance, usage_file_path, ec2_instance_id=None):
 
         if is_ec2_instance:
             data["aws_monthly_total_bandwidth_used"] = convert_size(total_bandwidth_used)
+        else:
+            data["aws_monthly_total_bandwidth_used"] = convert_size(total_sent+total_recv)
 
         write_json(usage_file_path, data)
-        time.sleep(1)
+        time.sleep(2)
 
 # Ensure the reports directory exists
 reports_dir = os.path.join(home, "reports")
