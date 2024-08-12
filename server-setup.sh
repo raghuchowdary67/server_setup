@@ -219,6 +219,10 @@ setup_python_env() {
       sudo apt-get install python3 -y
       sudo apt-get install python3-venv -y
       sudo apt-get install python3-pip -y
+      # Install cloud-utils only if env_type contains EC2_
+      if [[ "$env_type" == EC2_* ]]; then
+        sudo apt-get install cloud-utils
+      fi
     else
       echo "Python is already installed."
     fi

@@ -7,6 +7,7 @@ import os
 import math
 from datetime import datetime, timedelta
 import subprocess
+import platform
 import sys
 import json
 
@@ -91,16 +92,35 @@ def get_aws_bandwidth_usage(ec2_instance_id):
 
 def get_instance_id():
     try:
-        result = subprocess.run(['ec2-metadata', '--instance-id'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                text=True)
-        if result.returncode == 0:
-            return result.stdout.strip().split(": ")[1]
+        # Determine the OS type
+        os_type = platform.system()
+
+        # Use the appropriate command based on the OS
+        if os_type == "Linux":
+            # Check if it's Amazon Linux (AMI)
+            with open('/etc/os-release') as f:
+                os_release = f.read()
+            if 'Amazon Linux' in os_release:
+                command = 'ec2-metadata'
+            else:  # Assume Ubuntu for other Linux distributions
+                command = 'ec2metadata'
+
+            # Run the command
+            result = subprocess.run([command, '--instance-id'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            if result.returncode == 0:
+                return result.stdout.strip().split(": ")[1] if command == 'ec2-metadata' else result.stdout.strip()
+            else:
+                print(f"Error fetching instance ID: {result.stderr}")
+                return None
         else:
-            print(f"Error fetching instance ID: {result.stderr}")
+            print(f"Unsupported OS: {os_type}")
             return None
+
     except Exception as e:
         print(f"Unable to fetch instance ID: {e}")
         return None
+
 
 def write_json(usage_file_path, data):
     with open(usage_file_path, 'w') as usage_file:
