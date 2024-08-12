@@ -5,7 +5,7 @@ import time
 import fcntl
 import os
 import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import subprocess
 import platform
 import sys
@@ -53,13 +53,35 @@ is_ec2 = len(sys.argv) > 1 and sys.argv[1].lower().startswith('ec2_')
 
 def get_billing_period():
     """Get the current AWS billing period."""
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     start = datetime(now.year, now.month, 1)
     end = start + timedelta(days=32)
     end = datetime(end.year, end.month, 1)
     return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
 
 def get_aws_bandwidth_usage(ec2_instance_id):
+    # IMPORTANT: To Access cloud watch setup the IAM role using below steps
+    # Create an IAM Role:
+        # Go to AWS Management Console:
+        # Navigate to the IAM (Identity and Access Management) service.
+        # Select "Roles" from the sidebar.
+        # Click "Create role."
+        # Select EC2 Service:
+        # Choose the "AWS service" type and select "EC2" as the service that will use this role.
+        # Attach Policies:
+        # Attach the necessary policies to your role (e.g., CloudWatchReadOnlyAccess, AmazonS3ReadOnlyAccess, etc.).
+        # Name and Create Role:
+        # Provide a name for your role (e.g., MyEC2Role) and create it.
+    # Attach the IAM Role to Your EC2 Instance:
+        # Go to EC2 Dashboard:
+        # Navigate to the EC2 Dashboard in the AWS Management Console.
+        # Select Your Instance:
+        # Choose the EC2 instance where you want to attach the IAM role.
+        # Actions > Security > Modify IAM Role:
+        # Click on "Actions" > "Security" > "Modify IAM Role."
+        # Attach Role:
+        # Select the IAM role you created and attach it to your instance.
+
     """Get AWS EC2 instance bandwidth usage."""
     import boto3  # Only import boto3 if running on EC2
 
