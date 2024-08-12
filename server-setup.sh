@@ -354,4 +354,3 @@ fi
 setup_network_monitor_service
 
 echo "Setup is complete."
-
