@@ -344,7 +344,8 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
   echo "Cloning server_setup app from GitHub..."
   if [ -d "$HOME/server_setup/.git" ]; then
     echo "Repository already exists. Pulling latest changes..."
-    git -C "$HOME/server_setup" pull
+    git -C "$HOME/server_setup" fetch --all
+    git -C "$HOME/server_setup" reset --hard origin/main
   else
     echo "Repo doesn't exists so Cloning server_setup from GitHub..."
     git clone https://github.com/raghuchowdary67/server_setup.git "$HOME/server_setup"
