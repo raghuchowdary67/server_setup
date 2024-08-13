@@ -9,6 +9,9 @@ generate_random_password() {
   tr -dc A-Za-z0-9 </dev/urandom | head -c 8 ; echo ''
 }
 
+# Get the current logged-in user
+CURRENT_USER=$(whoami)
+
 # Prompt the user for installation environment
 while true; do
   echo "Where are you installing this:"
@@ -122,6 +125,15 @@ else
   else
     echo "Docker is already installed."
   fi
+fi
+
+# Add the current user to the Docker group
+if ! groups "ubuntu" | grep -q '\bdocker\b'; then
+  echo "Adding $CURRENT_USER to the Docker group..."
+  sudo usermod -aG docker "$CURRENT_USER"
+  echo "You need to log out and back in for the changes to take effect."
+else
+  echo "$CURRENT_USER is already in the Docker group."
 fi
 
 # Install Docker Compose
@@ -343,8 +355,8 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
   setup_python_env "$INSTANCE_TYPE"
   setup_network_monitor_script "clone"
   # Start Docker Compose
-#  echo "Starting Docker Compose..."
-#  sudo docker-compose up -d
+  echo "Starting Docker Compose..."
+  docker compose up -d
 
 elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
   setup_network_monitor_script "download"
