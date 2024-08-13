@@ -128,7 +128,7 @@ else
 fi
 
 # Add the current user to the Docker group
-if ! groups "ubuntu" | grep -q '\bdocker\b'; then
+if ! groups "$CURRENT_USER" | grep -q '\bdocker\b'; then
   echo "Adding $CURRENT_USER to the Docker group..."
   sudo usermod -aG docker "$CURRENT_USER"
   echo "You need to log out and back in for the changes to take effect."
