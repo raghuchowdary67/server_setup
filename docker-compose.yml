@@ -4,7 +4,7 @@ services:
     container_name: mariadb
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "source ${HOME}/secrets/.env && mysqladmin ping -h localhost -u $MYSQL_USER -p$MYSQL_PASSWORD"]
+      test: ["CMD-SHELL", "bash /project/check_mariadb_health.sh"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -16,7 +16,7 @@ services:
     ports:
       - "3306:3306"
     networks:
-      - internal-net
+      - server_setup_internal-net
 
   redis:
     image: redis:6
@@ -32,7 +32,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - internal-net
+      - server_setup_internal-net
 
   server_setup:
     build: .
@@ -48,7 +48,7 @@ services:
     ports:
       - "5000:5000"
     networks:
-      - internal-net
+      - server_setup_internal-net
 
 volumes:
   mariadb_data:
