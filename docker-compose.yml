@@ -1,13 +1,8 @@
-networks:
-  my_shared_network:
-    external: false
 services:
   mariadb:
     image: mariadb:10.5
     container_name: mariadb
     restart: always
-    networks:
-      - my_shared_network
     healthcheck:
       test: ["CMD-SHELL", "source ${HOME}/secrets/.env && mysqladmin ping -h localhost -u $MYSQL_USER -p$MYSQL_PASSWORD"]
       interval: 30s
@@ -20,13 +15,13 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init.sql file
     ports:
       - "3306:3306"
+    networks:
+      - internal-net
 
   redis:
     image: redis:6
     container_name: redis
     restart: always
-    networks:
-      - my_shared_network
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 30s
@@ -36,13 +31,13 @@ services:
       - redis_data:/data
     ports:
       - "6379:6379"
+    networks:
+      - internal-net
 
   server_setup:
     build: .
     container_name: server_setup
     restart: always
-    networks:
-      - my_shared_network
     depends_on:
       - mariadb
       - redis
@@ -52,6 +47,8 @@ services:
       - /:/host_fs  # Add this line to bind mount the host root
     ports:
       - "5000:5000"
+    networks:
+      - internal-net
 
 volumes:
   mariadb_data:
@@ -66,3 +63,7 @@ volumes:
       type: none
       o: bind
       device: ${HOME}/docker-volumes/redis
+
+networks:
+  internal-net:
+    driver: bridge
