@@ -38,6 +38,7 @@ services:
     build: .
     container_name: server_setup
     restart: always
+    image: server_setup:v1
     depends_on:
       - mariadb
       - redis
