@@ -370,6 +370,10 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
   echo "Starting Docker Compose..."
   docker compose up -d
 
+  # Clean up old Docker images
+  echo "Cleaning up old Docker images..."
+  docker image prune -f
+
 elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
   setup_network_monitor_script "download"
   setup_python_env "$INSTANCE_TYPE"
