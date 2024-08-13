@@ -145,6 +145,17 @@ else
   echo "Docker Compose is already installed."
 fi
 
+# Define network name
+NETWORK_NAME="server_setup_internal-net"
+
+# Check if the network exists
+if ! docker network ls --filter name=${NETWORK_NAME} -q | grep -q .; then
+    echo "Network '${NETWORK_NAME}' does not exist. Creating it..."
+    docker network create --driver bridge ${NETWORK_NAME}
+else
+    echo "Network '${NETWORK_NAME}' already exists."
+fi
+
 # Create secrets directory and the .env file
 SECRETS_DIR="$HOME/secrets"
 mkdir -p "$SECRETS_DIR"

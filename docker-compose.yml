@@ -65,5 +65,5 @@ volumes:
       device: ${HOME}/docker-volumes/redis
 
 networks:
-  internal-net:
-    driver: bridge
+  server_setup_internal-net:
+    external: true
