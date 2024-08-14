@@ -12,7 +12,8 @@ import sys
 import json
 
 home = os.environ.get("HOME")
-print("Home directory is: "+home)
+print("Home directory is: " + home)
+
 
 def convert_size(size_bytes):
     """
@@ -36,10 +37,12 @@ def convert_size(size_bytes):
 
     return f"{s} {size_name[i]}"
 
+
 def get_network_stats():
     """Get network stats."""
     net_io = psutil.net_io_counters()
     return net_io.bytes_sent, net_io.bytes_recv
+
 
 def get_system_stats():
     """Get system stats."""
@@ -48,8 +51,10 @@ def get_system_stats():
     server_mem_usage = mem.percent
     return server_cpu_usage, server_mem_usage
 
+
 # Determine if this is running on EC2
 is_ec2 = len(sys.argv) > 1 and sys.argv[1].lower().startswith('ec2_')
+
 
 def get_billing_period():
     """Get the current AWS billing period."""
@@ -59,28 +64,29 @@ def get_billing_period():
     end = datetime(end.year, end.month, 1)
     return start.strftime('%Y-%m-%d'), end.strftime('%Y-%m-%d')
 
+
 def get_aws_bandwidth_usage(ec2_instance_id):
     # IMPORTANT: To Access cloud watch setup the IAM role using below steps
     # Create an IAM Role:
-        # Go to AWS Management Console:
-        # Navigate to the IAM (Identity and Access Management) service.
-        # Select "Roles" from the sidebar.
-        # Click "Create role."
-        # Select EC2 Service:
-        # Choose the "AWS service" type and select "EC2" as the service that will use this role.
-        # Attach Policies:
-        # Attach the necessary policies to your role (e.g., CloudWatchReadOnlyAccess, AmazonS3ReadOnlyAccess, etc.).
-        # Name and Create Role:
-        # Provide a name for your role (e.g., MyEC2Role) and create it.
+    # Go to AWS Management Console:
+    # Navigate to the IAM (Identity and Access Management) service.
+    # Select "Roles" from the sidebar.
+    # Click "Create role."
+    # Select EC2 Service:
+    # Choose the "AWS service" type and select "EC2" as the service that will use this role.
+    # Attach Policies:
+    # Attach the necessary policies to your role (e.g., CloudWatchReadOnlyAccess, AmazonS3ReadOnlyAccess, etc.).
+    # Name and Create Role:
+    # Provide a name for your role (e.g., MyEC2Role) and create it.
     # Attach the IAM Role to Your EC2 Instance:
-        # Go to EC2 Dashboard:
-        # Navigate to the EC2 Dashboard in the AWS Management Console.
-        # Select Your Instance:
-        # Choose the EC2 instance where you want to attach the IAM role.
-        # Actions > Security > Modify IAM Role:
-        # Click on "Actions" > "Security" > "Modify IAM Role."
-        # Attach Role:
-        # Select the IAM role you created and attach it to your instance.
+    # Go to EC2 Dashboard:
+    # Navigate to the EC2 Dashboard in the AWS Management Console.
+    # Select Your Instance:
+    # Choose the EC2 instance where you want to attach the IAM role.
+    # Actions > Security > Modify IAM Role:
+    # Click on "Actions" > "Security" > "Modify IAM Role."
+    # Attach Role:
+    # Select the IAM role you created and attach it to your instance.
 
     """Get AWS EC2 instance bandwidth usage."""
     import boto3  # Only import boto3 if running on EC2
@@ -112,6 +118,7 @@ def get_aws_bandwidth_usage(ec2_instance_id):
     total_bandwidth = network_in + network_out
     return total_bandwidth
 
+
 def get_instance_id():
     try:
         # Determine the OS type
@@ -128,7 +135,8 @@ def get_instance_id():
                 command = 'ec2metadata'
 
             # Run the command
-            result = subprocess.run([command, '--instance-id'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run([command, '--instance-id'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True)
 
             if result.returncode == 0:
                 return result.stdout.strip().split(": ")[1] if command == 'ec2-metadata' else result.stdout.strip()
@@ -149,6 +157,7 @@ def write_json(usage_file_path, data):
         fcntl.flock(usage_file, fcntl.LOCK_EX)
         json.dump(data, usage_file, indent=4)
         fcntl.flock(usage_file, fcntl.LOCK_UN)
+
 
 def generate_metrics(is_ec2_instance, usage_file_path, ec2_instance_id=None):
     aws_cache_duration = 600
@@ -184,14 +193,20 @@ def generate_metrics(is_ec2_instance, usage_file_path, ec2_instance_id=None):
             "instance_total_upload": convert_size(total_sent),
             "instance_total_download": convert_size(total_recv)
         }
+        print(str(total_sent))
+        print(str(total_recv))
+        data["aws_monthly_total_bandwidth_used"] = convert_size(total_sent + total_recv)
 
-        if is_ec2_instance:
-            data["aws_monthly_total_bandwidth_used"] = convert_size(total_bandwidth_used)
-        else:
-            data["aws_monthly_total_bandwidth_used"] = convert_size(total_sent+total_recv)
+        # if is_ec2_instance:
+        #     data["aws_monthly_total_bandwidth_used"] = convert_size(total_bandwidth_used)
+        # else:
+        #     print(str(total_sent))
+        #     print(str(total_recv))
+        #     data["aws_monthly_total_bandwidth_used"] = convert_size(total_sent + total_recv)
 
         write_json(usage_file_path, data)
         time.sleep(2)
+
 
 # Ensure the reports directory exists
 reports_dir = os.path.join(home, "reports")
