@@ -4,7 +4,7 @@ services:
     container_name: mariadb
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "bash /project/check_mariadb_health.sh"]
+      test: ["CMD-SHELL", "bash /check_mariadb_health.sh"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -50,6 +50,11 @@ services:
       - "5000:5000"
     networks:
       - server_setup_internal-net
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail http://localhost:5000/monitor/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   mariadb_data:

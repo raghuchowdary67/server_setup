@@ -31,10 +31,10 @@ env_model = api.model('Env', {
 })
 
 env_update_model = api.model('EnvUpdate', {
-    'MYSQL_ROOT_PASSWORD': fields.String(required=True, description='MySQL root password'),
-    'MYSQL_DATABASE': fields.String(required=True, description='MySQL database name'),
-    'MYSQL_USER': fields.String(required=True, description='MySQL username'),
-    'MYSQL_PASSWORD': fields.String(required=True, description='MySQL user password')
+    'MYSQL_ROOT_PASSWORD': fields.String(description='MySQL root password'),
+    'MYSQL_DATABASE': fields.String(description='MySQL database name'),
+    'MYSQL_USER': fields.String(description='MySQL username'),
+    'MYSQL_PASSWORD': fields.String(description='MySQL user password')
 })
 
 service_operation_model = api.model('ServiceOperation', {
@@ -143,7 +143,7 @@ class ManageEnv(Resource):
     @ns.doc('get_env')
     @ns.marshal_with(env_model)
     def get(self):
-        env_file = f'/{home}/secrets/.env'
+        env_file = f'{home}/secrets/.env'
         if not os.path.exists(env_file):
             return {'env': 'No environment file found.'}, 404
         with open(env_file, 'r') as file:
@@ -154,11 +154,31 @@ class ManageEnv(Resource):
     @ns.expect(env_update_model)
     def post(self):
         new_env = request.json
-        env_file = f'/{home}/secrets/.env'
+        env_file = f'{home}/secrets/.env'
+
+        # Load existing environment variables
+        existing_env = {}
+        if os.path.exists(env_file):
+            with open(env_file, 'r') as file:
+                for line in file:
+                    if '=' in line:
+                        key, value = line.strip().split('=', 1)
+                        existing_env[key] = value
+
+        # Update only the provided environment variables
+        for key, value in new_env.items():
+            if key in env_update_model.keys() and value:
+                existing_env[key] = value
+
+        # Write updated environment variables back to the .env file
         with open(env_file, 'w') as file:
-            for key, value in new_env.items():
+            for key, value in existing_env.items():
                 file.write(f'{key}={value}\n')
-        update_db_credentials(new_env)
+
+        # Apply changes to the database if relevant variables are updated
+        if {'MYSQL_ROOT_PASSWORD', 'MYSQL_DATABASE', 'MYSQL_USER', 'MYSQL_PASSWORD'} & new_env.keys():
+            update_db_credentials(new_env)
+
         return jsonify({'status': 'success'})
 
 @ns.route('/service')
@@ -171,24 +191,28 @@ class ManageService(Resource):
         service_directory = f"{home}/GIT/{folder_name}"
 
         if 'server_setup' in folder_name:
-            print("This folder is not supported")
             return {'message': f'Directory {service_directory} This folder is not supported.'}, 400
 
         if not os.path.isdir(service_directory):
-            print("file not found")
             return {'message': f'Directory {service_directory} does not exist.'}, 400
 
         try:
             result = subprocess.run([f'{home}/server_setup/manage_service.sh', folder_name, operation], check=True, capture_output=True)
             output = result.stdout.decode() + result.stderr.decode()
-            print("output: "+str(output))
             return jsonify({'status': 'success', 'output': output})
         except subprocess.CalledProcessError as e:
             return {'message': e.stderr.decode()}, 500
 
+@ns.route('/health')
+class HealthCheck(Resource):
+    def get(self):
+        return jsonify({'status': 'healthy'})
+
 def update_db_credentials(new_env):
     mariadb_container = client.containers.get('mariadb')
-    mariadb_container.exec_run(f"mysql -uroot -p{new_env['MYSQL_ROOT_PASSWORD']} -e \"ALTER USER '{new_env['MYSQL_USER']}'@'%' IDENTIFIED BY '{new_env['MYSQL_PASSWORD']}';\"")
+    mariadb_container.exec_run(
+        f"mysql -u root -p {new_env['MYSQL_ROOT_PASSWORD']} -e \"ALTER USER '{new_env['MYSQL_USER']}'@'%' IDENTIFIED BY '{new_env['MYSQL_PASSWORD']}';\""
+    )
     mariadb_container.restart()
 
 if __name__ == '__main__':
