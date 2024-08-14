@@ -205,6 +205,7 @@ class ManageService(Resource):
 
 @ns.route('/health')
 class HealthCheck(Resource):
+    @ns.doc('healthcheck')
     def get(self):
         return jsonify({'status': 'healthy'})
 
