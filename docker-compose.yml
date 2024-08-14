@@ -4,7 +4,7 @@ services:
     container_name: mariadb
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "bash /app/check_mariadb_health.sh"]  # Updated path
+      test: [ "CMD-SHELL", "bash /home/check_mariadb_health.sh" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -13,6 +13,7 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init.sql file
+      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh  # Mount the script
     ports:
       - "3306:3306"
     networks:
