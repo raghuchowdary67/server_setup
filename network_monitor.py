@@ -54,6 +54,7 @@ def get_system_stats():
 
 # Determine if this is running on EC2
 is_ec2 = len(sys.argv) > 1 and sys.argv[1].lower().startswith('ec2_')
+print(f"Network script is running in ec2: {is_ec2}")
 
 
 def get_billing_period():
