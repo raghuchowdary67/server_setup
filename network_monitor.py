@@ -198,9 +198,6 @@ def generate_metrics(is_ec2_instance, usage_file_path, ec2_instance_id=None):
         if not is_ec2_instance:
             print("As this is not Ec2 instance we are setting the total_bandwidth used with instance totals")
             total_bandwidth_used = total_sent + total_recv
-            print(str(total_sent))
-            print(str(total_recv))
-            print(str(total_bandwidth_used))
         data["monthly_total_bandwidth_used"] = convert_size(total_bandwidth_used)
 
         write_json(usage_file_path, data)
