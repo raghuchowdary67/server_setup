@@ -81,3 +81,10 @@ Follow the logs in real-time:
 bash
 Copy code
 sudo docker-compose logs -f
+
+
+#Usefull Docker commands
+  docker inspect --format='{{json .State.Health}}' mariadb
+  docker logs -f --tail 10 redbull-admin-backend
+  docker exec -it mariadb bash
+  docker exec -it mariadb mysql -u root -p
