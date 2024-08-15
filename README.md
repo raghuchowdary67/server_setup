@@ -92,6 +92,9 @@ sudo docker-compose logs -f
   docker exec -it mariadb mysql -u root -p
 
 # Docker complete reset
+To perform all in one command use the below one:
+    docker stop $(docker ps -aq) && docker rm $(docker ps -aq) && docker rmi $(docker images -q) && docker volume rm $(docker volume ls -q)
+Or else use the individual ones.
   1. Stop and Remove All Containers
      docker stop $(docker ps -aq)
      docker rm $(docker ps -aq)
