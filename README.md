@@ -89,6 +89,7 @@ sudo docker-compose logs -f
   docker inspect --format='{{json .State.Health}}' mariadb
   docker logs -f --tail 10 redbull-admin-backend
   docker exec -it mariadb bash
+  docker run -it --rm mariadb:10.5 /bin/bash
   docker exec -it mariadb mysql -u root -p
 
 # Docker complete reset
