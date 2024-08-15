@@ -1,6 +1,17 @@
-CREATE USER '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-GRANT ALL PRIVILEGES ON *.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;
+-- Create the primary database using the `MYSQL_DATABASE` variable
+CREATE DATABASE IF NOT EXISTS `${MYSQL_DATABASE}`;
+
+-- Create the secondary database using the `MYSQL_USER_DATABASE` variable
+CREATE DATABASE IF NOT EXISTS `${MYSQL_USER_DATABASE}`;
+
+-- Grant privileges to the user on the primary database
+GRANT ALL PRIVILEGES ON `${MYSQL_DATABASE}`.* TO '${MYSQL_USER}'@'%';
+
+-- Grant privileges to the user on the secondary database
+GRANT ALL PRIVILEGES ON `${MYSQL_USER_DATABASE}`.* TO '${MYSQL_USER}'@'%';
+
+-- Apply changes
 FLUSH PRIVILEGES;
 
--- Verify creation
-SELECT user, host FROM mysql.user;
+-- Optional: Verify creation
+SHOW DATABASES;
