@@ -89,3 +89,18 @@ sudo docker-compose logs -f
   docker logs -f --tail 10 redbull-admin-backend
   docker exec -it mariadb bash
   docker exec -it mariadb mysql -u root -p
+
+# Docker complete reset
+  1. Stop and Remove All Containers
+     docker stop $(docker ps -aq)
+     docker rm $(docker ps -aq)
+  2. Remove All Images
+     docker rmi $(docker images -q)
+  3. Remove All Volumes
+     docker volume rm $(docker volume ls -q)
+  4. Remove All Networks
+     docker network rm $(docker network ls -q)
+  5. Remove All Docker Data (Optional)
+     sudo systemctl stop docker 
+     sudo rm -rf /var/lib/docker
+     sudo systemctl start docker
