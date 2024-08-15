@@ -4,9 +4,6 @@ CREATE DATABASE IF NOT EXISTS `${MYSQL_DATABASE}`;
 -- Create the secondary database using the `MYSQL_USER_DATABASE` variable
 CREATE DATABASE IF NOT EXISTS `${MYSQL_USER_DATABASE}`;
 
--- Create the user if it doesn't exist
-CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'%' IDENTIFIED BY '${MYSQL_PASSWORD}';
-
 -- Grant privileges to the user on the primary database
 GRANT ALL PRIVILEGES ON `${MYSQL_DATABASE}`.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;
 
