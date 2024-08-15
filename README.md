@@ -84,6 +84,7 @@ sudo docker-compose logs -f
 
 
 #Usefull Docker commands
+  cat $HOME/secrets/.env
   docker inspect --format='{{json .State.Health}}' mariadb
   docker logs -f --tail 10 redbull-admin-backend
   docker exec -it mariadb bash
