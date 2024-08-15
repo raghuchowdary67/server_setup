@@ -12,12 +12,14 @@ services:
       - ${HOME}/secrets/.env
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the init.sql file
+      - ./init.template.sql:/docker-entrypoint-initdb.d/init.template.sql  # Mount the template SQL file
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh  # Mount the initialization script
       - ./check_mariadb_health.sh:/home/check_mariadb_health.sh  # Mount the script
     ports:
       - "3306:3306"
     networks:
       - server_setup_internal-net
+    entrypoint: ["/bin/bash", "/docker-entrypoint-initdb.d/init.sh"]  # Use init.sh as the entrypoint
 
   redis:
     image: redis:6
