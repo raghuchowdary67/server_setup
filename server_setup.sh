@@ -384,10 +384,10 @@ elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy"
   read -r -p "Do you want to include Redis? (yes/no): " include_redis
     if [ "$include_redis" == "yes" ]; then
       echo "Running server_setup and Redis..."
-      docker-compose up -d server_setup redis
+      docker compose up -d server_setup redis
     else
       echo "Running server_setup only..."
-      docker-compose up -d server_setup
+      docker compose up -d server_setup
     fi
 
   # Clean up old Docker images
