@@ -1,10 +1,6 @@
 #!/bin/bash
 # chmod +x init.sh
 
-# Debugging
-echo "Starting initialization script..."
-ls -l /docker-entrypoint-initdb.d/
-
 # Replace variables in init.template.sql
 sed "s/\${MYSQL_DATABASE}/${MYSQL_DATABASE}/g; s/\${MYSQL_USER_DATABASE}/${MYSQL_USER_DATABASE}/g; s/\${MYSQL_USER}/${MYSQL_USER}/g" /docker-entrypoint-initdb.d/init.template.sql > /docker-entrypoint-initdb.d/init.sql
 
