@@ -216,6 +216,7 @@ append_db_credentials() {
   cat <<EOL | sudo tee -a "$SECRETS_DIR"/.env > /dev/null
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_DATABASE=rmovies_admin
+MYSQL_USER_DATABASE=rmovies_users
 MYSQL_USER=$MYSQL_USER
 MYSQL_PASSWORD=$MYSQL_PASSWORD
 MASTER_ADMIN_USER=$MASTER_ADMIN_USER
@@ -268,25 +269,19 @@ setup_python_env() {
 }
 
 # Function to download or use the network monitor script
-setup_network_monitor_script() {
-  local script_source=$1
-
-  if [ "$script_source" == "clone" ]; then
-    DESTINATION_PATH="$HOME/server_setup/network_monitor.py"
+clone_server_setup() {
+  # Clone the flask_app from GitHub
+  echo "Cloning server_setup app from GitHub..."
+  if [ -d "$HOME/server_setup/.git" ]; then
+    echo "Repository already exists. Pulling latest changes..."
+    git -C "$HOME/server_setup" fetch --all
+    git -C "$HOME/server_setup" reset --hard origin/main
   else
-    GITHUB_URL="https://raw.githubusercontent.com/raghuchowdary67/server_setup/main/network_monitor.py"
-    DESTINATION_PATH="$HOME/server_setup/network_monitor.py"
-    if [ -f "$DESTINATION_PATH" ]; then
-      read -r -p "The network monitor script already exists. Do you want to overwrite it? (y/n): " OVERWRITE_SCRIPT
-      if [[ "$OVERWRITE_SCRIPT" =~ ^[Yy]$ ]]; then
-        curl -o "$DESTINATION_PATH" "$GITHUB_URL"
-      else
-        echo "Skipping download of the network monitor script."
-      fi
-    else
-      curl -o "$DESTINATION_PATH" "$GITHUB_URL"
-    fi
+    echo "Repo doesn't exists so Cloning server_setup from GitHub..."
+    git clone https://github.com/raghuchowdary67/server_setup.git "$HOME/server_setup"
   fi
+
+  DESTINATION_PATH="$HOME/server_setup/network_monitor.py"
 
   chmod +x "$DESTINATION_PATH"
 }
@@ -351,21 +346,12 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
     echo "MySQL credentials already exist in .env file. Skipping."
   fi
 
-  # Clone the flask_app from GitHub
-  echo "Cloning server_setup app from GitHub..."
-  if [ -d "$HOME/server_setup/.git" ]; then
-    echo "Repository already exists. Pulling latest changes..."
-    git -C "$HOME/server_setup" fetch --all
-    git -C "$HOME/server_setup" reset --hard origin/main
-  else
-    echo "Repo doesn't exists so Cloning server_setup from GitHub..."
-    git clone https://github.com/raghuchowdary67/server_setup.git "$HOME/server_setup"
-  fi
+  clone_server_setup
 
   cd "$HOME"/server_setup || exit
   echo "Setting Venv and starting network usage script..."
+
   setup_python_env "$INSTANCE_TYPE"
-  setup_network_monitor_script "clone"
   # Start Docker Compose
   echo "Starting Docker Compose..."
   docker compose up -d
@@ -375,10 +361,22 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
   docker image prune -f
 
 elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
-  setup_network_monitor_script "download"
+  clone_server_setup
   setup_python_env "$INSTANCE_TYPE"
+
+  read -r -p "Do you want to include Redis? (yes/no): " include_redis
+    if [ "$include_redis" == "yes" ]; then
+      echo "Running server_setup and Redis..."
+      docker-compose up -d server_setup redis
+    else
+      echo "Running server_setup only..."
+      docker-compose up -d server_setup
+    fi
+
+  # Clean up old Docker images
+  echo "Cleaning up old Docker images..."
+  docker image prune -f
 fi
 
 setup_network_monitor_service
-
 echo "Setup is complete."
