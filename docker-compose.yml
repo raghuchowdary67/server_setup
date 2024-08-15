@@ -19,6 +19,7 @@ services:
       - "3306:3306"
     networks:
       - server_setup_internal-net
+    entrypoint: ["/bin/bash", "/docker-entrypoint-initdb.d/init.sh"]  # Use init.sh as the entrypoint
 
   redis:
     image: redis:6
