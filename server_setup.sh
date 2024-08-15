@@ -207,8 +207,25 @@ fi
 # Function to set up Docker volumes
 setup_docker_volumes() {
   echo "Creating Docker volumes for MariaDB and Redis..."
-  mkdir -p "$HOME"/docker-volumes/mariadb
-  mkdir -p "$HOME"/docker-volumes/redis
+
+  # Define volume directories
+  local mariadb_volume_dir="$HOME/docker-volumes/mariadb"
+  local redis_volume_dir="$HOME/docker-volumes/redis"
+
+  # Create directories if they do not exist
+  if [ ! -d "$mariadb_volume_dir" ]; then
+    echo "Creating directory for MariaDB volume: $mariadb_volume_dir"
+    mkdir -p "$mariadb_volume_dir"
+  else
+    echo "Directory for MariaDB volume already exists: $mariadb_volume_dir"
+  fi
+
+  if [ ! -d "$redis_volume_dir" ]; then
+    echo "Creating directory for Redis volume: $redis_volume_dir"
+    mkdir -p "$redis_volume_dir"
+  else
+    echo "Directory for Redis volume already exists: $redis_volume_dir"
+  fi
 }
 
 # Function to append database credentials to the .env file
@@ -340,13 +357,13 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
 
     MYSQL_ROOT_PASSWORD=$(generate_random_password)
 
-    setup_docker_volumes
     append_db_credentials
   else
     echo "MySQL credentials already exist in .env file. Skipping."
   fi
 
   clone_server_setup
+  setup_docker_volumes
 
   cd "$HOME"/server_setup || exit
   echo "Setting Venv and starting network usage script..."
