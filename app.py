@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='1.5', title='System Monitoring API',
+api = Api(app, version='1.5.1', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
