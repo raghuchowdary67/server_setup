@@ -7,12 +7,13 @@ COPY init.sh /docker-entrypoint-initdb.d/
 # Debug: List files and permissions
 RUN ls -l /docker-entrypoint-initdb.d/
 
-# Set permissions
+# Set permissions for init.sh
 RUN chmod +x /docker-entrypoint-initdb.d/init.sh
-# Ensure that /docker-entrypoint-initdb.d/ is writable
+
+# Ensure that /docker-entrypoint-initdb.d/ is writable (optional)
 RUN chmod 777 /docker-entrypoint-initdb.d
 
-# Debug: List files and permissions again
+# Debug: List directory permissions again
 RUN ls -ld /docker-entrypoint-initdb.d/
 
 # Define the default command
