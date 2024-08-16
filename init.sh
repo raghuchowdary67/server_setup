@@ -1,11 +1,6 @@
 #!/bin/bash
 # chmod +x init.sh
 
-# Print environment variables for debugging
-echo "MYSQL_DATABASE: ${MYSQL_DATABASE}"
-echo "MYSQL_USER_DATABASE: ${MYSQL_USER_DATABASE}"
-echo "MYSQL_USER: ${MYSQL_USER}"
-
 # Change ownership of the init directory
 chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d
 
