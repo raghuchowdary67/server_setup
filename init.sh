@@ -3,8 +3,6 @@
 # Change ownership of the init directory to the current running user
 chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d
 
-source ${HOME}/secrets/.env
-
 # Substitute environment variables in the SQL file
 sed "s|\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|\${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|\${MYSQL_USER}|${MYSQL_USER}|g" \
 /docker-entrypoint-initdb.d/init-template.sql > /tmp/init-substituted.sql
