@@ -6,6 +6,7 @@ import os
 import subprocess
 import docker
 from flask_restx import Api, Resource, fields
+from flask_cors import CORS
 
 from common.common import calculate_uptime, system_start_time, parse_status_file
 
@@ -16,8 +17,11 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='1.6', title='System Monitoring API',
+api = Api(app, version='2.0', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
+
+# Enable CORS for all routes and origins
+CORS(app)
 
 client = docker.from_env()
 home = "/home/redbull"
@@ -111,15 +115,6 @@ def get_system_info():
         }
 
         if 'No file' not in status:
-            # cpu_percent=data.get('cpu_percent', 0.0),
-            #         memory_percent=data.get('memory_percent', 0.0),
-            #         bandwidth=Bandwidth(
-            #             main_upload_speed=data.get('current_upload_speed', '0 B/s'),
-            #             main_download_speed=data.get('current_download_speed', '0 B/s'),
-            #             instance_total_upload=data.get('instance_total_upload', '0 KB'),
-            #             instance_total_download=data.get('instance_total_download', '0 KB'),
-            #             total_bandwidth_used=data.get('monthly_total_bandwidth_used', '0 GB')
-            #         )
             result = {
                 "isMainServer": system_type == 'Main Server',
                 "isRunning": True,

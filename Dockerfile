@@ -5,7 +5,7 @@ WORKDIR /app
 COPY app.py /app
 COPY common /app/common
 
-RUN pip install flask psutil docker flask-restx
+RUN pip install flask psutil docker flask-restx flask-cors
 
 # Install git and docker-compose
 RUN apt-get update && apt-get install -y git curl
