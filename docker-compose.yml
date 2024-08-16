@@ -13,7 +13,10 @@ services:
     entrypoint: >
       sh -c "
       chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d &&
-      sed 's|${MYSQL_DATABASE}|${MYSQL_DATABASE}|g;s|${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g;s|${MYSQL_USER}|${MYSQL_USER}|g' /docker-entrypoint-initdb.d/init.sql > /docker-entrypoint-initdb.d/init-substituted.sql &&
+      sed -e 's|\\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g' \
+          -e 's|\\${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g' \
+          -e 's|\\${MYSQL_USER}|${MYSQL_USER}|g' \
+          /docker-entrypoint-initdb.d/init.sql > /docker-entrypoint-initdb.d/init-substituted.sql &&
       exec /usr/local/bin/docker-entrypoint.sh mysqld
       "
     environment:
