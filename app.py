@@ -8,7 +8,7 @@ from flask_restx import Api, Resource, fields
 from common.common import calculate_uptime, system_start_time, parse_status_file
 
 app = Flask(__name__)
-api = Api(app, version='1.3', title='System Monitoring API',
+api = Api(app, version='1.4', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
@@ -140,6 +140,7 @@ def get_system_info():
                 result["disk_usage"] = disk_usage
             return result
         else:
+            print(f"No data is returned and {status}")
             return {'message': 'No data available'}, 204
     except Exception as e:
         return {'message': str(e)}, 500
@@ -271,6 +272,7 @@ class StopService(Resource):
             return {'message': 'Docker error: ' + str(e)}, 500
         except Exception as e:
             return {'message': 'An error occurred: ' + str(e)}, 500
+
 
 @ns.route('/env')
 class ManageEnv(Resource):

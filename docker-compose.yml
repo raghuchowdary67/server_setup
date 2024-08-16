@@ -44,7 +44,7 @@ services:
       dockerfile: Dockerfile
     container_name: server_setup
     restart: always
-    image: server_setup:v1.3
+    image: server_setup:v1.4
     env_file:
       - ${HOME}/secrets/.env
     volumes:
