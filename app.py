@@ -5,32 +5,51 @@ import subprocess
 import docker
 from flask_restx import Api, Resource, fields
 
+from common.common import calculate_uptime, system_start_time, parse_status_file
+
 app = Flask(__name__)
 api = Api(app, version='1.0', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
 home = "/home/redbull"
+system_type = os.getenv('SYSTEM_TYPE', 'Main Server')
+instance_type = os.getenv('INSTANCE_TYPE', 'EC2_UBUNTU')
 
 ns = api.namespace('monitor', description='Monitoring operations')
 
+# Define models
+disk_usage_model = api.model('DiskUsage', {
+    'label': fields.String(description='Label of the disk usage information'),
+    'size': fields.String(description='Total size of the filesystem'),
+    'used': fields.String(description='Used space on the filesystem'),
+    'available': fields.String(description='Available space on the filesystem'),
+    'percent': fields.Float(description='Used space percentage'),
+    'mounted_on': fields.String(description='Mount point of the filesystem'),
+})
+
+usage_model = api.model('Usage', {
+    'label': fields.String(description='Label for CPU or Memory usage'),
+    'number': fields.Float(description='Usage percentage')
+})
+
+items_model = api.model('Items', {
+    'label': fields.String(description='Label for the system item'),
+    'number': fields.String(description='Value of the system item')
+})
+
 system_model = api.model('SystemInfo', {
-    'cpu_usage': fields.Float(required=True, description='CPU usage percentage'),
-    'memory_usage': fields.Float(required=True, description='Memory usage percentage'),
-    'disk_usage': fields.List(fields.Nested(api.model('DiskUsage', {
-        'filesystem': fields.String(description='Filesystem name'),
-        'size': fields.String(description='Total size of the filesystem'),
-        'used': fields.String(description='Used space on the filesystem'),
-        'available': fields.String(description='Available space on the filesystem'),
-        'percent': fields.Float(description='Used space percentage'),
-        'mounted_on': fields.String(description='Mount point of the filesystem'),
-    })), description='Disk usage details')
+    'isMainServer': fields.Boolean(description='Indicates if the system is the main server'),
+    'isRunning': fields.Boolean(description='Indicates if the system is currently running'),
+    'items': fields.List(fields.Nested(items_model), description='System items such as uptime, upload speed, etc.'),
+    'usage': fields.List(fields.Nested(usage_model), description='CPU and memory usage details'),
+    'disk_usage': fields.List(fields.Nested(disk_usage_model), description='Disk usage details')
 })
 
 docker_model = api.model('DockerStats', {
     'container_name': fields.String(required=True, description='Container name'),
-    'cpu_usage': fields.String(required=True, description='CPU usage percentage'),  # Changed to String
-    'memory_usage': fields.String(required=True, description='Memory usage percentage')  # Changed to String
+    'cpu_usage': fields.String(required=True, description='CPU usage percentage'),
+    'memory_usage': fields.String(required=True, description='Memory usage percentage')
 })
 
 env_model = api.model('Env', {
@@ -71,61 +90,93 @@ def get_size(size_in_bytes):
 
 
 def get_system_info():
-    cpu_usage = psutil.cpu_percent(interval=1)
-    memory = psutil.virtual_memory()
-    memory_usage = memory.percent
-    disk_usage = []
+    try:
+        uptime_days, uptime_hours, uptime_minutes = calculate_uptime(system_start_time)
+        system_up_time = f"{uptime_days}D {uptime_hours}H {uptime_minutes}M"
 
-    # Get unique mountpoints for filtering duplicates
-    seen = set()
-    relevant_mountpoints = ['/host_fs', '/host_fs/home', '/host_fs/mnt/newdrive']
+        status = parse_status_file("/home/redbull/reports/system_network_usage.json")
 
-    for part in psutil.disk_partitions():
-        if part.mountpoint in relevant_mountpoints and part.mountpoint not in seen:
-            seen.add(part.mountpoint)
-            usage = psutil.disk_usage(part.mountpoint)
-            disk_usage.append({
-                'filesystem': part.device,
-                'size': get_size(usage.total),
-                'used': get_size(usage.used),
-                'available': get_size(usage.free),
-                'percent': usage.percent,
-                'mounted_on': part.mountpoint
-            })
-    return {
-        'cpu_usage': cpu_usage,
-        'memory_usage': memory_usage,
-        'disk_usage': disk_usage
-    }
+        drive_labels = {
+            '/host_fs': 'OS Partition',
+            '/host_fs/home': 'Home Partition',
+            '/host_fs/mnt/newdrive': 'New Drive'
+        }
+
+        if 'No data exists' not in status:
+            result = {
+                "isMainServer": system_type == 'Main Server',
+                "isRunning": True,
+                "items": [
+                    {"label": "Uptime", "number": system_up_time},
+                    {"label": "Upload", "number": status.bandwidth.main_upload_speed},
+                    {"label": "Download", "number": status.bandwidth.main_download_speed},
+                    {"label": "Downloaded", "number": status.bandwidth.instance_total_download},
+                    {"label": "Uploaded", "number": status.bandwidth.instance_total_upload},
+                    {"label": "Total", "number": status.bandwidth.total_bandwidth_used}
+                ],
+                "usage": [
+                    {"label": "CPU Usage", "number": status.cpu_percent},
+                    {"label": "Memory Usage", "number": status.memory_percent}
+                ],
+            }
+
+            disk_usage = []
+            seen = set()
+            relevant_mount_points = ['/host_fs', '/host_fs/home', '/host_fs/mnt/newdrive']
+
+            for part in psutil.disk_partitions():
+                if part.mountpoint in relevant_mount_points and part.mountpoint not in seen:
+                    seen.add(part.mountpoint)
+                    usage = psutil.disk_usage(part.mountpoint)
+                    label = drive_labels.get(part.mountpoint, 'Partition')
+                    disk_usage.append({
+                        "label": label,
+                        "size": get_size(usage.total),
+                        "used": get_size(usage.used),
+                        "available": get_size(usage.free),
+                        "percent": usage.percent
+                    })
+            if disk_usage:
+                result["disk_usage"] = disk_usage
+            return result
+        else:
+            return {'message': 'No data available'}, 204
+    except Exception as e:
+        return {'message': str(e)}, 500
 
 
 def get_docker_stats():
-    containers = client.containers.list()
-    stats = []
-    for container in containers:
-        container_stats = container.stats(stream=False)
-        cpu_stats = container_stats['cpu_stats']
-        precpu_stats = container_stats['precpu_stats']
-        cpu_usage = cpu_stats['cpu_usage']
-        percpu_usage = cpu_usage.get('percpu_usage', [cpu_usage['total_usage']])
+    try:
+        containers = client.containers.list()
+        stats = []
+        for container in containers:
+            container_stats = container.stats(stream=False)
+            cpu_stats = container_stats['cpu_stats']
+            precpu_stats = container_stats['precpu_stats']
+            cpu_usage = cpu_stats['cpu_usage']
+            percpu_usage = cpu_usage.get('percpu_usage', [cpu_usage['total_usage']])
 
-        if 'system_cpu_usage' in cpu_stats and 'system_cpu_usage' in precpu_stats:
-            cpu_delta = cpu_usage['total_usage'] - precpu_stats['cpu_usage']['total_usage']
-            system_cpu_delta = cpu_stats['system_cpu_usage'] - precpu_stats['system_cpu_usage']
-            number_cpus = len(percpu_usage)
-            cpu_percent = (cpu_delta / system_cpu_delta) * number_cpus * 100.0 if system_cpu_delta > 0 else 0.0
-        else:
-            cpu_percent = 0.0
+            if 'system_cpu_usage' in cpu_stats and 'system_cpu_usage' in precpu_stats:
+                cpu_delta = cpu_usage['total_usage'] - precpu_stats['cpu_usage']['total_usage']
+                system_cpu_delta = cpu_stats['system_cpu_usage'] - precpu_stats['system_cpu_usage']
+                number_cpus = len(percpu_usage)
+                cpu_percent = (cpu_delta / system_cpu_delta) * number_cpus * 100.0 if system_cpu_delta > 0 else 0.0
+            else:
+                cpu_percent = 0.0
 
-        memory_stats = container_stats['memory_stats']
-        memory_usage = (memory_stats['usage'] / memory_stats['limit']) * 100.0 if memory_stats['limit'] > 0 else 0.0
+            memory_stats = container_stats['memory_stats']
+            memory_usage = (memory_stats['usage'] / memory_stats['limit']) * 100.0 if memory_stats['limit'] > 0 else 0.0
 
-        stats.append({
-            'container_name': container.name,
-            'cpu_usage': f"{cpu_percent:.2f}%",  # Format CPU usage as a percentage
-            'memory_usage': f"{memory_usage:.2f}%"  # Format memory usage as a percentage
-        })
-    return stats
+            stats.append({
+                'container_name': container.name,
+                'cpu_usage': f"{cpu_percent:.2f}%",
+                'memory_usage': f"{memory_usage:.2f}%"
+            })
+        return stats
+    except docker.errors.DockerException as e:
+        return {'message': 'Docker error: ' + str(e)}, 500
+    except Exception as e:
+        return {'message': 'An error occurred: ' + str(e)}, 500
 
 
 @ns.route('/system')
@@ -156,7 +207,7 @@ class DockerInfo(Resource):
 
 @ns.route('/restart')
 class RestartService(Resource):
-    @ns.doc("This endpoint allows restarting the server, database, or Redis cache.")
+    @ns.doc('restart_service', description="Restart the server, database, or Redis service.")
     @ns.expect(service_restart_model)
     def post(self):
         """
@@ -169,23 +220,28 @@ class RestartService(Resource):
         If the specified service is not valid, an error message will be returned.
         """
         service = request.json.get('service')
-        if service == 'server':
-            subprocess.run(['reboot'])
-        elif service == 'db':
-            client.containers.get('mariadb').restart()
-        elif service == 'redis':
-            client.containers.get('redis').restart()
-        else:
-            if client.containers.get(service):
-                client.containers.get(service).restart()
+        try:
+            if service == 'server':
+                subprocess.run(['reboot'])
+            elif service == 'db':
+                client.containers.get('mariadb').restart()
+            elif service == 'redis':
+                client.containers.get('redis').restart()
             else:
-                return {'message': f'{service} is not a valid container name to restart'}, 400
-        return jsonify({'status': 'success'})
+                if client.containers.get(service):
+                    client.containers.get(service).restart()
+                else:
+                    return {'message': f'{service} is not a valid container name to restart'}, 400
+            return jsonify({'status': 'success'})
+        except docker.errors.DockerException as e:
+            return {'message': 'Docker error: ' + str(e)}, 500
+        except Exception as e:
+            return {'message': 'An error occurred: ' + str(e)}, 500
 
 
 @ns.route('/stop')
 class StopService(Resource):
-    @ns.doc("This endpoint allows stopping the server, database, or Redis cache.")
+    @ns.doc('stop_service', description="Stop the server, database, or Redis service.")
     @ns.expect(service_stop_model)
     def post(self):
         """
@@ -198,19 +254,23 @@ class StopService(Resource):
         If the specified service is not valid, an error message will be returned.
         """
         service = request.json.get('service')
-        if service == 'server':
-            subprocess.run(['shutdown', 'now'])
-        elif service == 'db':
-            client.containers.get('mariadb').stop()
-        elif service == 'redis':
-            client.containers.get('redis').stop()
-        else:
-            if client.containers.get(service):
-                client.containers.get(service).stop()
+        try:
+            if service == 'server':
+                subprocess.run(['shutdown', '-h', 'now'])
+            elif service == 'db':
+                client.containers.get('mariadb').stop()
+            elif service == 'redis':
+                client.containers.get('redis').stop()
             else:
-                return {'message': f'{service} is not a valid container name to stop'}, 400
-        return jsonify({'status': 'success'})
-
+                if client.containers.get(service):
+                    client.containers.get(service).stop()
+                else:
+                    return {'message': f'{service} is not a valid container name to stop'}, 400
+            return jsonify({'status': 'success'})
+        except docker.errors.DockerException as e:
+            return {'message': 'Docker error: ' + str(e)}, 500
+        except Exception as e:
+            return {'message': 'An error occurred: ' + str(e)}, 500
 
 @ns.route('/env')
 class ManageEnv(Resource):

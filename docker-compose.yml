@@ -45,6 +45,8 @@ services:
     container_name: server_setup
     restart: always
     image: server_setup:v1
+    env_file:
+      - ${HOME}/secrets/.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${HOME}:/home/redbull
