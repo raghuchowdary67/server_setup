@@ -91,6 +91,7 @@ sudo docker-compose logs -f
   docker exec -it mariadb bash
   docker run -it --rm mariadb:10.5 /bin/bash
   docker exec -it mariadb mysql -u root -p
+  docker exec -it mariadb mysql -u redbull_admin -p
 
 # Docker complete reset
 To perform all in one command use the below one:
