@@ -20,7 +20,7 @@ services:
     user: "${CURRENT_UID}:${CURRENT_GID}"
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql
       - ./init.sh:/home/init.sh
       - ./check_mariadb_health.sh:/home/check_mariadb_health.sh
     ports:
