@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='1.5.2', title='System Monitoring API',
+api = Api(app, version='1.5.3', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
@@ -111,6 +111,7 @@ def get_system_info():
         }
 
         if 'No file' not in status:
+            logger.info("Status received constructing the response.")
             result = {
                 "isMainServer": system_type == 'Main Server',
                 "isRunning": True,
@@ -128,6 +129,7 @@ def get_system_info():
                 ],
             }
 
+            logger.info("Fetching the Disk usage...")
             disk_usage = []
             seen = set()
             relevant_mount_points = ['/host_fs', '/host_fs/home', '/host_fs/mnt/newdrive']
@@ -145,12 +147,14 @@ def get_system_info():
                         "percent": usage.percent
                     })
             if disk_usage:
+                logger.info("Disk usage Fetched")
                 result["disk_usage"] = disk_usage
             return result
         else:
             logger.info(f"No data is returned and {status}")
             return {'message': 'No data available'}, 204
     except Exception as e:
+        logger.info(f"Exception occurred: {e}")
         return {'message': str(e)}, 500
 
 

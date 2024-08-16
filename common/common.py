@@ -38,10 +38,13 @@ def parse_status_file(file_path):
         fcntl.flock(file, fcntl.LOCK_UN)
 
     try:
+        logger.info(f"File read parsing the json: {content}")
         data = json.loads(content)
     except json.JSONDecodeError as e:
+        logger.info(f"Error while parsing the file: {e}")
         return f"Error parsing JSON in {file_path}: {e}"
 
+    logger.info(f"File parsed and data is: {data.get('cpu_percent', 0.0)}")
     return {
         "cpu_percent": data.get('cpu_percent', 0.0),
         "memory_percent": data.get('memory_percent', 0.0),
