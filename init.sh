@@ -1,7 +1,7 @@
 #!/bin/bash
 # chmod +x init.sh
 
-# Change ownership of the init directory to the current user
+# Change ownership of the init directory to the current running user
 chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d
 
 # Substitute environment variables in the SQL file
