@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='1.5.4', title='System Monitoring API',
+api = Api(app, version='1.6', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
@@ -111,16 +111,25 @@ def get_system_info():
         }
 
         if 'No file' not in status:
+            # cpu_percent=data.get('cpu_percent', 0.0),
+            #         memory_percent=data.get('memory_percent', 0.0),
+            #         bandwidth=Bandwidth(
+            #             main_upload_speed=data.get('current_upload_speed', '0 B/s'),
+            #             main_download_speed=data.get('current_download_speed', '0 B/s'),
+            #             instance_total_upload=data.get('instance_total_upload', '0 KB'),
+            #             instance_total_download=data.get('instance_total_download', '0 KB'),
+            #             total_bandwidth_used=data.get('monthly_total_bandwidth_used', '0 GB')
+            #         )
             result = {
                 "isMainServer": system_type == 'Main Server',
                 "isRunning": True,
                 "items": [
                     {"label": "Uptime", "number": system_up_time},
-                    {"label": "Upload", "number": status.get('main_upload_speed', '0 B/s')},
-                    {"label": "Download", "number": status.get('main_download_speed', '0 B/s')},
+                    {"label": "Upload", "number": status.get('current_upload_speed', '0 B/s')},
+                    {"label": "Download", "number": status.get('current_download_speed', '0 B/s')},
                     {"label": "Downloaded", "number": status.get('instance_total_download', '0 KB')},
                     {"label": "Uploaded", "number": status.get('instance_total_upload', '0 KB')},
-                    {"label": "Total", "number": status.get('total_bandwidth_used', '0 GB')}
+                    {"label": "Total", "number": status.get('monthly_total_bandwidth_used', '0 GB')}
                 ],
                 "usage": [
                     {"label": "CPU Usage", "number": status.get('cpu_percent', 0.0)},
@@ -128,7 +137,6 @@ def get_system_info():
                 ],
             }
 
-            logger.info("Fetching the Disk usage...")
             disk_usage = []
             seen = set()
             relevant_mount_points = ['/host_fs', '/host_fs/home', '/host_fs/mnt/newdrive']
@@ -146,7 +154,6 @@ def get_system_info():
                         "percent": usage.percent
                     })
             if disk_usage:
-                logger.info("Disk usage Fetched")
                 result["disk_usage"] = disk_usage
             return result
         else:
