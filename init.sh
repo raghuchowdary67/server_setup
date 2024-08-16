@@ -11,4 +11,6 @@ sed "s|\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|\${MYSQL_USER_DATABASE}|${MYSQL
 mv /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init.sql
 
 # Start MariaDB
-exec /usr/local/bin/docker-entrypoint.sh mysqld
+#exec /usr/local/bin/docker-entrypoint.sh mysqld
+# Execute the SQL file using the default root user
+mysql -u root -p"$MYSQL_ROOT_PASSWORD" < /docker-entrypoint-initdb.d/init.sql
