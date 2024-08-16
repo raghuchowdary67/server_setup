@@ -10,13 +10,7 @@ services:
       retries: 5
     env_file:
       - ${HOME}/secrets/.env
-    entrypoint: >
-      sh -c '
-      chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d &&
-      sed "s|${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|${MYSQL_USER}|${MYSQL_USER}|g" /docker-entrypoint-initdb.d/init.sql > /tmp/init-substituted.sql &&
-      mv /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init-substituted.sql &&
-      exec /usr/local/bin/docker-entrypoint.sh mysqld
-      '
+    entrypoint: "./init-mariadb.sh"  # Use the script as the entrypoint
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
