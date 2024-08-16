@@ -1,10 +1,15 @@
 #!/bin/bash
 # chmod +x init.sh
 
+# Debug: List files and permissions
+echo "Listing /docker-entrypoint-initdb.d/"
+ls -l /docker-entrypoint-initdb.d/
+
 # Replace variables in init.template.sql
 sed "s/\${MYSQL_DATABASE}/${MYSQL_DATABASE}/g; s/\${MYSQL_USER_DATABASE}/${MYSQL_USER_DATABASE}/g; s/\${MYSQL_USER}/${MYSQL_USER}/g" /docker-entrypoint-initdb.d/init.template.sql > /docker-entrypoint-initdb.d/init.sql
 
-# Check if init.sql was created
+# Debug: Verify init.sql creation
+echo "Verifying /docker-entrypoint-initdb.d/init.sql"
 ls -l /docker-entrypoint-initdb.d/
 
 # Wait for MariaDB to be ready

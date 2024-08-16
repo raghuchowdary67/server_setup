@@ -40,7 +40,9 @@ services:
       - server_setup_internal-net
 
   server_setup:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: server_setup
     restart: always
     image: server_setup:v1
