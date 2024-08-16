@@ -1,37 +1,37 @@
 services:
   mariadb:
-      image: mariadb:10.6
-      container_name: mariadb
-      restart: always
-      healthcheck:
-        test: [ "CMD-SHELL", "bash /home/check_mariadb_health.sh" ]
-        interval: 30s
-        timeout: 10s
-        retries: 5
-      env_file:
-        - ${HOME}/secrets/.env
-      entrypoint: >
-        sh -c "
-        chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d &&
-        sed 's|${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|${MYSQL_USER}|${MYSQL_USER}|g' /docker-entrypoint-initdb.d/init.sql > /tmp/init-substituted.sql &&
-        mv /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init-substituted.sql &&
-        exec /usr/local/bin/docker-entrypoint.sh mysqld
-        "
-      environment:
-        MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-        MYSQL_DATABASE: ${MYSQL_DATABASE}
-        MYSQL_USER_DATABASE: ${MYSQL_USER_DATABASE}
-        MYSQL_USER: ${MYSQL_USER}
-        MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      user: "${CURRENT_UID}:${CURRENT_GID}"  # Use the non-root user you want to run as
-      volumes:
-        - mariadb_data:/var/lib/mysql
-        - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Mount the SQL file directly
-        - ./check_mariadb_health.sh:/home/check_mariadb_health.sh
-      ports:
-        - "3306:3306"
-      networks:
-        - server_setup_internal-net
+    image: mariadb:10.6
+    container_name: mariadb
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "bash /home/check_mariadb_health.sh" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    env_file:
+      - ${HOME}/secrets/.env
+    entrypoint: >
+      sh -c '
+      chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d &&
+      sed "s|${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|${MYSQL_USER}|${MYSQL_USER}|g" /docker-entrypoint-initdb.d/init.sql > /tmp/init-substituted.sql &&
+      mv /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init-substituted.sql &&
+      exec /usr/local/bin/docker-entrypoint.sh mysqld
+      '
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER_DATABASE: ${MYSQL_USER_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    user: "${CURRENT_UID}:${CURRENT_GID}"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh
+    ports:
+      - "3306:3306"
+    networks:
+      - server_setup_internal-net
 
   redis:
     image: redis:6
