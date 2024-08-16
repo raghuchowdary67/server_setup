@@ -30,6 +30,7 @@ def calculate_uptime(service_start_time: datetime) -> tuple:
 
 def parse_status_file(file_path):
     if not os.path.exists(file_path):
+        logger.info(f"File Dont exist in : {file_path}")
         return f"No file {file_path} exists"
 
     with open(file_path, 'r') as file:
@@ -38,21 +39,9 @@ def parse_status_file(file_path):
         fcntl.flock(file, fcntl.LOCK_UN)
 
     try:
-        logger.info(f"File read parsing the json: {content}")
         data = json.loads(content)
     except json.JSONDecodeError as e:
         logger.info(f"Error while parsing the file: {e}")
         return f"Error parsing JSON in {file_path}: {e}"
 
-    logger.info(f"File parsed and data is: {data.get('cpu_percent', 0.0)}")
-    return {
-        "cpu_percent": data.get('cpu_percent', 0.0),
-        "memory_percent": data.get('memory_percent', 0.0),
-        "bandwidth": {
-            "main_upload_speed": data.get('main_upload_speed', '0 B/s'),
-            "main_download_speed": data.get('main_download_speed', '0 B/s'),
-            "instance_total_upload": data.get('instance_total_upload', '0 KB'),
-            "instance_total_download": data.get('instance_total_download', '0 KB'),
-            "total_bandwidth_used": data.get('total_bandwidth_used', '0 GB')
-        }
-    }
+    return data

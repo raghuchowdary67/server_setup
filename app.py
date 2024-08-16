@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='1.5.3', title='System Monitoring API',
+api = Api(app, version='1.5.4', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
@@ -111,21 +111,20 @@ def get_system_info():
         }
 
         if 'No file' not in status:
-            logger.info("Status received constructing the response.")
             result = {
                 "isMainServer": system_type == 'Main Server',
                 "isRunning": True,
                 "items": [
                     {"label": "Uptime", "number": system_up_time},
-                    {"label": "Upload", "number": status.bandwidth.main_upload_speed},
-                    {"label": "Download", "number": status.bandwidth.main_download_speed},
-                    {"label": "Downloaded", "number": status.bandwidth.instance_total_download},
-                    {"label": "Uploaded", "number": status.bandwidth.instance_total_upload},
-                    {"label": "Total", "number": status.bandwidth.total_bandwidth_used}
+                    {"label": "Upload", "number": status.get('main_upload_speed', '0 B/s')},
+                    {"label": "Download", "number": status.get('main_download_speed', '0 B/s')},
+                    {"label": "Downloaded", "number": status.get('instance_total_download', '0 KB')},
+                    {"label": "Uploaded", "number": status.get('instance_total_upload', '0 KB')},
+                    {"label": "Total", "number": status.get('total_bandwidth_used', '0 GB')}
                 ],
                 "usage": [
-                    {"label": "CPU Usage", "number": status.cpu_percent},
-                    {"label": "Memory Usage", "number": status.memory_percent}
+                    {"label": "CPU Usage", "number": status.get('cpu_percent', 0.0)},
+                    {"label": "Memory Usage", "number": status.get('memory_percent', 0.0)}
                 ],
             }
 
