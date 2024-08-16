@@ -8,7 +8,7 @@ from flask_restx import Api, Resource, fields
 from common.common import calculate_uptime, system_start_time, parse_status_file
 
 app = Flask(__name__)
-api = Api(app, version='1.0', title='System Monitoring API',
+api = Api(app, version='1.2', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
