@@ -29,8 +29,10 @@ def calculate_uptime(service_start_time: datetime) -> tuple:
 
 def parse_status_file(file_path):
     if not os.path.exists(file_path):
+        logger.info(f"File path {file_path} docent exists")
         return "No data exists"
 
+    logger.info(f"File path {file_path} exists, reading the file")
     with open(file_path, 'r') as file:
         fcntl.flock(file, fcntl.LOCK_SH)
         content = file.read()
@@ -38,6 +40,7 @@ def parse_status_file(file_path):
 
     data = {}
     try:
+        logger.info("Parsing the data into response")
         data['cpu_percent'] = float(next(line.split(': ')[1].strip().replace('%', '') for line in content.split('\n') if
                                          line.startswith("CPU Usage")))
         data['memory_percent'] = float(next(
