@@ -1,3 +1,5 @@
+import logging
+
 from flask import Flask, jsonify, request
 import psutil
 import os
@@ -7,8 +9,14 @@ from flask_restx import Api, Resource, fields
 
 from common.common import calculate_uptime, system_start_time, parse_status_file
 
+# Configure logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
-api = Api(app, version='1.4', title='System Monitoring API',
+api = Api(app, version='1.5', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 client = docker.from_env()
@@ -140,7 +148,7 @@ def get_system_info():
                 result["disk_usage"] = disk_usage
             return result
         else:
-            print(f"No data is returned and {status}")
+            logger.info(f"No data is returned and {status}")
             return {'message': 'No data available'}, 204
     except Exception as e:
         return {'message': str(e)}, 500

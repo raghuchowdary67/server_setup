@@ -1,9 +1,13 @@
 import fcntl
+import logging
 import os
 from datetime import datetime
 
 # Global variable to store the start time of the service
 system_start_time = datetime.now()
+
+# Get the logger for this module
+logger = logging.getLogger(__name__)
 
 
 def calculate_uptime(service_start_time: datetime) -> tuple:
@@ -53,10 +57,10 @@ def parse_status_file(file_path):
                                             line.startswith("AWS Monthly Total Bandwidth Used"))
 
     except StopIteration:
-        print("No data Exists in the file")
+        logger.info("No data Exists in the file")
         return "No data exists"
 
-    print("Data found: "+str(data.get('cpu_percent', 0.0)))
+    logger.info("Data found: "+str(data.get('cpu_percent', 0.0)))
     return {
         "cpu_percent": data.get('cpu_percent', 0.0),
         "memory_percent": data.get('memory_percent', 0.0),
