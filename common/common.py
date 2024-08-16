@@ -1,4 +1,5 @@
 import fcntl
+import json
 import logging
 import os
 from datetime import datetime
@@ -29,41 +30,18 @@ def calculate_uptime(service_start_time: datetime) -> tuple:
 
 def parse_status_file(file_path):
     if not os.path.exists(file_path):
-        logger.info(f"File path {file_path} docent exists")
-        return "No data exists"
+        return f"No file {file_path} exists"
 
     with open(file_path, 'r') as file:
         fcntl.flock(file, fcntl.LOCK_SH)
         content = file.read()
         fcntl.flock(file, fcntl.LOCK_UN)
 
-    data = {}
     try:
-        logger.info(f"Parsing the data into response: {content}")
-        data['cpu_percent'] = float(next(line.split(': ')[1].strip().replace('%', '') for line in content.split('\n') if
-                                         line.startswith("CPU Usage")))
-        logger.info(f"Parsing the data into response: {data['cpu_percent']}")
-        data['memory_percent'] = float(next(
-            line.split(': ')[1].strip().replace('%', '') for line in content.split('\n') if
-            line.startswith("Memory Usage")))
-        data['main_upload_speed'] = next(line.split(': ')[1].split(',')[0].strip() for line in content.split('\n') if
-                                         line.startswith("Current Upload Speed"))
-        data['main_download_speed'] = next(line.split(': ')[2].split(',')[0].strip() for line in content.split('\n') if
-                                           line.startswith("Current Upload Speed"))
-        data['instance_total_upload'] = next(
-            line.split(': ')[1].split(',')[0].strip() for line in content.split('\n') if
-            line.startswith("Instance Total Upload"))
-        data['instance_total_download'] = next(
-            line.split(': ')[2].split(',')[0].strip() for line in content.split('\n') if
-            line.startswith("Instance Total Upload"))
-        data['total_bandwidth_used'] = next(line.split(': ')[1].strip() for line in content.split('\n') if
-                                            line.startswith("AWS Monthly Total Bandwidth Used"))
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        return f"Error parsing JSON in {file_path}: {e}"
 
-    except StopIteration:
-        logger.info("No data Exists in the file")
-        return "No data exists"
-
-    logger.info("Data found: "+str(data.get('cpu_percent', 0.0)))
     return {
         "cpu_percent": data.get('cpu_percent', 0.0),
         "memory_percent": data.get('memory_percent', 0.0),
