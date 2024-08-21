@@ -4,39 +4,41 @@ services:
     container_name: mariadb
     restart: always
     healthcheck:
-      test: [ "CMD-SHELL", "bash /home/check_mariadb_health.sh" ]
+      test: ["CMD-SHELL", "bash /home/check_mariadb_health.sh"]
       interval: 30s
       timeout: 10s
       retries: 5
     env_file:
       - ${HOME}/secrets/.env
-    entrypoint: "/home/init.sh"  # Use the script as the entrypoint
+    entrypoint: "/home/init.sh"
     user: "${CURRENT_UID}:${CURRENT_GID}"
     volumes:
-      - mariadb_data:/var/lib/mysql
-      - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql
-      - ./init.sh:/home/init.sh
-      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh
+      - mariadb_data:/var/lib/mysql:rw
+      - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql:ro
+      - ./init.sh:/home/init.sh:ro
+      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh:ro
     ports:
       - "3306:3306"
     networks:
-      - server_setup_internal-net
+      server_setup_internal-net:
+        ipv4_address: 172.20.0.2  # Assign static IP address
 
   redis:
     image: redis:6
     container_name: redis
     restart: always
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
     volumes:
-      - redis_data:/data
+      - redis_data:/data:rw
     ports:
       - "6379:6379"
     networks:
-      - server_setup_internal-net
+      server_setup_internal-net:
+        ipv4_address: 172.20.0.3  # Assign static IP address
 
   server_setup:
     build:
@@ -44,22 +46,24 @@ services:
       dockerfile: Dockerfile
     container_name: server_setup
     restart: always
-    image: server_setup:v2.0
+    image: server_setup:v2.1
     env_file:
       - ${HOME}/secrets/.env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${HOME}:/home/redbull
-      - /:/host_fs  # Add this line to bind mount the host root
+      - ${HOME}:/home/redbull:rw
+      - /:/host_fs:ro  # Restricting host root file system to read-only
     ports:
       - "5000:5000"
     networks:
-      - server_setup_internal-net
+      server_setup_internal-net:
+        ipv4_address: 172.20.0.4  # Assign static IP address
     healthcheck:
-      test: [ "CMD-SHELL", "curl --fail http://localhost:5000/monitor/health || exit 1" ]
+      test: ["CMD-SHELL", "curl --fail http://localhost:5000/monitor/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
+    user: redbull:redbull  # Running the container as the non-root user
 
 volumes:
   mariadb_data:

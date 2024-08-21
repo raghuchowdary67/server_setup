@@ -1,8 +1,14 @@
 # server_setup
-This is to setup the server
 
-to run this app in docker use the below command..
+This repository provides the necessary configurations to set up the server.
+
+## Running the Application in Docker
+
+To run this application using Docker, use the following command:
+
+```bash
 sudo docker-compose up -d --build
+```
 
 
 Example Usage
@@ -110,3 +116,23 @@ Or else use the individual ones.
      sudo systemctl stop docker 
      sudo rm -rf /var/lib/docker
      sudo systemctl start docker
+
+To Refresh the .env files we need to recreate the application:
+
+1. Stop and Remove the Existing Container
+Run the following command to stop and remove the existing container:
+
+bash
+Copy code
+docker-compose stop redbull-admin-backend
+docker-compose rm -f redbull-admin-backend
+2. Rebuild and Restart the Service
+Rebuild and restart the service to ensure it picks up the changes in the .env file:
+
+bash
+Copy code
+docker-compose up --build -d redbull-admin-backend
+
+To check the ip address of the each docker container use this command
+docker ps -q | xargs -I{} sh -c 'docker inspect --format "{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" {}'
+

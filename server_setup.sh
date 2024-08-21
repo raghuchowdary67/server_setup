@@ -147,11 +147,12 @@ fi
 
 # Define network name
 NETWORK_NAME="server_setup_internal-net"
+SUBNET="172.20.0.0/16"
 
 # Check if the network exists
 if ! docker network ls --filter name=${NETWORK_NAME} -q | grep -q .; then
     echo "Network '${NETWORK_NAME}' does not exist. Creating it..."
-    docker network create --driver bridge ${NETWORK_NAME}
+    docker network create --driver bridge --subnet=${SUBNET} ${NETWORK_NAME}
 else
     echo "Network '${NETWORK_NAME}' already exists."
 fi
@@ -238,6 +239,8 @@ MYSQL_USER=$MYSQL_USER
 MYSQL_PASSWORD=$MYSQL_PASSWORD
 MASTER_ADMIN_USER=$MASTER_ADMIN_USER
 MASTER_ADMIN_PASS=$MASTER_ADMIN_PASS
+API_BASE_URL=$API_BASE_URL
+USER_SERVICE_URL=$USER_SERVICE_URL
 EOL
 }
 
@@ -354,6 +357,12 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
 
     read -r -p "Enter MASTER_ADMIN_PASS (default: redpass1431): " MASTER_ADMIN_PASS
     MASTER_ADMIN_PASS=${MASTER_ADMIN_PASS:-redpass1431}
+
+    read -r -p "Enter API_BASE_URL (default: http://redbull-admin-backend:8007): " API_BASE_URL
+    API_BASE_URL=${API_BASE_URL:-http://redbull-admin-backend:8007}
+
+    read -r -p "Enter USER_SERVICE_URL (default: http://redbull-oauth-service:8001): " USER_SERVICE_URL
+    USER_SERVICE_URL=${USER_SERVICE_URL:-http://redbull-oauth-service:8001}
 
     MYSQL_ROOT_PASSWORD=$(generate_random_password)
 

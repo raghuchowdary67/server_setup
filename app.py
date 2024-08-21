@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='2.0', title='System Monitoring API',
+api = Api(app, version='2.1', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 # Enable CORS for all routes and origins
@@ -37,7 +37,6 @@ disk_usage_model = api.model('DiskUsage', {
     'used': fields.String(description='Used space on the filesystem'),
     'available': fields.String(description='Available space on the filesystem'),
     'percent': fields.Float(description='Used space percentage'),
-    'mounted_on': fields.String(description='Mount point of the filesystem'),
 })
 
 usage_model = api.model('Usage', {
