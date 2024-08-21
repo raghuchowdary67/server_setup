@@ -1,4 +1,4 @@
-FROM python:3.8-slim
+FROM python:3.9-slim
 
 # Create a non-root user named 'redbull'
 RUN useradd -ms /bin/bash redbull
