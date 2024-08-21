@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-api = Api(app, version='2.1', title='System Monitoring API',
+api = Api(app, version='2.2', title='System Monitoring API',
           description='A simple API to monitor system and Docker container stats')
 
 # Enable CORS for all routes and origins
