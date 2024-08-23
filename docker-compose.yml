@@ -45,7 +45,7 @@ services:
     container_name: redisinsight
     restart: always
     ports:
-      - "8001:8001"  # Expose the RedisInsight UI on port 8001
+      - "8002:8002"  # Expose the RedisInsight UI on port 8001
     networks:
       server_setup_internal-net:
         ipv4_address: 172.20.0.7  # Assign static IP address
