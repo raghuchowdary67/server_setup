@@ -40,18 +40,6 @@ services:
       server_setup_internal-net:
         ipv4_address: 172.20.0.3  # Assign static IP address
 
-  redisinsight:
-    image: redislabs/redisinsight:latest
-    container_name: redisinsight
-    restart: always
-    ports:
-      - "8002:8002"  # Expose the RedisInsight UI on port 8001
-    networks:
-      server_setup_internal-net:
-        ipv4_address: 172.20.0.7  # Assign static IP address
-    environment:
-      - REDISINSIGHT_HTTP_PORT=8002
-
   server_setup:
     build:
       context: .
