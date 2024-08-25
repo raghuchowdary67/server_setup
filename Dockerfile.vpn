@@ -5,12 +5,18 @@ FROM ubuntu:20.04
 RUN apt-get update && \
     apt-get install -y openvpn wget unzip tinyproxy iptables
 
-# Add the OpenVPN configuration files
+# Set working directory for the configuration download
 WORKDIR /etc/openvpn
-RUN wget https://surfshark.zendesk.com/hc/article_attachments/360018527519/configurations.zip && \
+
+# Download the OpenVPN configuration files
+RUN wget https://surfshark.zendesk.com/hc/article_attachments/360018527519/configurations.zip -O configurations.zip && \
     unzip configurations.zip && \
     rm configurations.zip && \
-    chmod 644 /etc/openvpn/*.ovpn
+    if [ ! -f "us-slc.prod.surfshark.com_udp.ovpn" ]; then echo "Download failed or file not found!"; exit 1; fi
+
+# Set permissions for the configuration file
+RUN chmod 644 us-slc.prod.surfshark.com_udp.ovpn && \
+    ls -l us-slc.prod.surfshark.com_udp.ovpn
 
 # Configure tinyproxy
 RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
@@ -23,6 +29,9 @@ EXPOSE 8002
 # Script to configure iptables for kill switch and start services
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
+
+# Run the container as root
+USER root
 
 # Start the VPN and proxy server with kill switch
 CMD ["/start.sh"]
