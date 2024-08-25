@@ -3,16 +3,14 @@ FROM ubuntu:20.04
 
 # Install required packages
 RUN apt-get update && \
-    apt-get install -y openvpn wget unzip tinyproxy iptables
+    apt-get install -y openvpn tinyproxy iptables
 
-# Set working directory for the configuration download
-WORKDIR /etc/openvpn
+# Create a directory in the container for the OpenVPN configuration files
+RUN mkdir -p /etc/openvpn/configurations
 
-# Download the OpenVPN configuration files
-RUN wget https://surfshark.zendesk.com/hc/article_attachments/360018527519/configurations.zip -O configurations.zip && \
-    unzip configurations.zip && \
-    rm configurations.zip && \
-    if [ ! -f "us-slc.prod.surfshark.com_udp.ovpn" ]; then echo "Download failed or file not found!"; exit 1; fi
+# Copy the OpenVPN configuration files from the host to the container
+# Replace "/path/to/local/vpn-servers" with the actual path
+COPY $HOME/vpn-servers/* /etc/openvpn/configurations/
 
 # Set permissions for the configuration file
 RUN chmod 644 us-slc.prod.surfshark.com_udp.ovpn && \
