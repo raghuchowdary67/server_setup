@@ -9,7 +9,8 @@ RUN apt-get update && \
 WORKDIR /etc/openvpn
 RUN wget https://surfshark.zendesk.com/hc/article_attachments/360018527519/configurations.zip && \
     unzip configurations.zip && \
-    rm configurations.zip
+    rm configurations.zip && \
+    chmod 644 /etc/openvpn/*.ovpn
 
 # Configure tinyproxy
 RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
