@@ -13,9 +13,3 @@ services:
       - $HOME//secrets/surfshark_credentials.txt:/secrets/surfshark_credentials.txt
     environment:
       - TINYPROXY_PORT=8002
-    networks:
-      - vpn-net
-
-networks:
-  vpn-net:
-    driver: bridge
