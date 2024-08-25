@@ -5,17 +5,6 @@ FROM ubuntu:20.04
 RUN apt-get update && \
     apt-get install -y openvpn tinyproxy iptables
 
-# Create a directory in the container for the OpenVPN configuration files
-RUN mkdir -p /etc/openvpn/configurations
-
-# Copy the OpenVPN configuration files from the host to the container
-# Replace "/path/to/local/vpn-servers" with the actual path
-COPY $HOME/vpn-servers/* /etc/openvpn/configurations/
-
-# Set permissions for the configuration file
-RUN chmod 644 us-slc.prod.surfshark.com_udp.ovpn && \
-    ls -l us-slc.prod.surfshark.com_udp.ovpn
-
 # Configure tinyproxy
 RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
     echo "ConnectPort 443" >> /etc/tinyproxy/tinyproxy.conf && \

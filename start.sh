@@ -15,9 +15,10 @@ iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 
 # Path to the credentials file in the $HOME/secrets folder
 CREDENTIALS_FILE="$HOME/secrets/surfshark_credentials.txt"
+OVPN_FILE="$HOME/vpn-servers/US_udp.ovpn"
 
 # Start OpenVPN in the background using the credentials file from $HOME/secrets
-openvpn --config /etc/openvpn/us-slc.prod.surfshark.com_udp.ovpn --auth-user-pass "$CREDENTIALS_FILE" &
+openvpn --config "$OVPN_FILE" --auth-user-pass "$CREDENTIALS_FILE" &
 
 # Wait for OpenVPN to connect
 sleep 10
