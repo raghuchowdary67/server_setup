@@ -136,3 +136,17 @@ docker-compose up --build -d redbull-admin-backend
 To check the ip address of the each docker container use this command
 docker ps -q | xargs -I{} sh -c 'docker inspect --format "{{.Name}} - {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" {}'
 
+to clean up old images 
+
+docker rmi $(docker images -q redbull-admin-backend)
+
+Build the Docker Image:
+
+bash
+Copy code
+docker build -t surfshark-vpn-proxy-killswitch -f Dockerfile.vpn .
+Run the Docker Container:
+
+bash
+Copy code
+docker run -d --name surfshark-vpn-proxy-killswitch -p 8002:8002 --cap-add=NET_ADMIN surfshark-vpn-proxy-killswitch
