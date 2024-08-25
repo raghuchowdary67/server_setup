@@ -9,7 +9,7 @@ services:
       - NET_ADMIN
     privileged: true
     volumes:
-      - $HOME/vpn-servers:/vpn-servers
-      - $HOME//secrets/surfshark_credentials.txt:/secrets/surfshark_credentials.txt
+      - $HOME/vpn-servers:/vpn-servers/cong
+      - $HOME/secrets/surfshark_credentials.txt:/secrets/surfshark_credentials.txt
     environment:
       - TINYPROXY_PORT=8002

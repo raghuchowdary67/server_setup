@@ -18,7 +18,7 @@ iptables -A OUTPUT -p udp --dport 1194 -j ACCEPT
 
 # Path to the credentials file in the $HOME/secrets folder (mounted via Docker Compose)
 CREDENTIALS_FILE="/secrets/surfshark_credentials.txt"
-OVPN_FILE="/vpn-servers/US_udp.ovpn"
+OVPN_FILE="/vpn-servers/us-dal.prod.surfshark.com_udp.ovpn"
 
 # Start OpenVPN in the background using the credentials file from /secrets
 openvpn --config "$OVPN_FILE" --auth-user-pass "$CREDENTIALS_FILE" &
