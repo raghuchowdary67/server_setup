@@ -11,9 +11,6 @@ RUN wget https://surfshark.zendesk.com/hc/article_attachments/360018527519/confi
     unzip configurations.zip && \
     rm configurations.zip
 
-# Copy the credentials file (this file should contain your Surfshark username and password)
-COPY surfshark_credentials.txt /etc/openvpn/credentials.txt
-
 # Configure tinyproxy
 RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
     echo "ConnectPort 443" >> /etc/tinyproxy/tinyproxy.conf && \
