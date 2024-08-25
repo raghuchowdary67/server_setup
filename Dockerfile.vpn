@@ -1,0 +1,30 @@
+# Base image
+FROM ubuntu:20.04
+
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y openvpn wget unzip tinyproxy iptables
+
+# Add the OpenVPN configuration files
+WORKDIR /etc/openvpn
+RUN wget https://surfshark.zendesk.com/hc/article_attachments/360018527519/configurations.zip && \
+    unzip configurations.zip && \
+    rm configurations.zip
+
+# Copy the credentials file (this file should contain your Surfshark username and password)
+COPY surfshark_credentials.txt /etc/openvpn/credentials.txt
+
+# Configure tinyproxy
+RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
+    echo "ConnectPort 443" >> /etc/tinyproxy/tinyproxy.conf && \
+    echo "ConnectPort 80" >> /etc/tinyproxy/tinyproxy.conf
+
+# Expose the proxy port
+EXPOSE 8002
+
+# Script to configure iptables for kill switch and start services
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Start the VPN and proxy server with kill switch
+CMD ["/start.sh"]

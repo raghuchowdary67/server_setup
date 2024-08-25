@@ -43,7 +43,7 @@ services:
   server_setup:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.server
     container_name: server_setup
     restart: always
     image: server_setup:v2.2
