@@ -13,11 +13,11 @@ iptables -A OUTPUT -o tun0 -j ACCEPT
 # Allow DNS queries to the VPN DNS servers (modify with your VPN's DNS IP if needed)
 iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
 
-# Path to the credentials file in the $HOME/secrets folder
-CREDENTIALS_FILE="$HOME/secrets/surfshark_credentials.txt"
-OVPN_FILE="$HOME/vpn-servers/US_udp.ovpn"
+# Path to the credentials file in the $HOME/secrets folder (mounted via Docker Compose)
+CREDENTIALS_FILE="/secrets/surfshark_credentials.txt"
+OVPN_FILE="/vpn-servers/US_udp.ovpn"
 
-# Start OpenVPN in the background using the credentials file from $HOME/secrets
+# Start OpenVPN in the background using the credentials file from /secrets
 openvpn --config "$OVPN_FILE" --auth-user-pass "$CREDENTIALS_FILE" &
 
 # Wait for OpenVPN to connect

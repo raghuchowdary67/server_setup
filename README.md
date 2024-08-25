@@ -140,13 +140,6 @@ to clean up old images
 
 docker rmi $(docker images -q redbull-admin-backend)
 
-Build the Docker Image:
+start the vpn docker compose:
 
-bash
-Copy code
-docker build -t surfshark-vpn-proxy-killswitch -f Dockerfile.vpn .
-Run the Docker Container:
-
-bash
-Copy code
-docker run -d --name surfshark-vpn-proxy-killswitch -p 8002:8002 --cap-add=NET_ADMIN surfshark-vpn-proxy-killswitch
+docker compose -f docker-compose-vpn.yml up --build -d

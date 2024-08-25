@@ -13,7 +13,7 @@ RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
 # Expose the proxy port
 EXPOSE 8002
 
-# Script to configure iptables for kill switch and start services
+# Copy the start.sh script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
