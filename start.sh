@@ -1,4 +1,5 @@
 #!/bin/bash
+#chmod +x start.sh
 
 # Block all outgoing traffic by default
 iptables -P OUTPUT DROP
