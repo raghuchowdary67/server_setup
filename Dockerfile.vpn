@@ -3,12 +3,14 @@ FROM ubuntu:20.04
 
 # Install required packages
 RUN apt-get update && \
-    apt-get install -y openvpn tinyproxy iptables
+    apt-get install -y openvpn tinyproxy curl nano iptables
 
-# Configure tinyproxy
+# Configure tinyproxy to allow all traffic and listen on port 8002
 RUN echo "Allow 0.0.0.0/0" >> /etc/tinyproxy/tinyproxy.conf && \
     echo "ConnectPort 443" >> /etc/tinyproxy/tinyproxy.conf && \
-    echo "ConnectPort 80" >> /etc/tinyproxy/tinyproxy.conf
+    echo "ConnectPort 80" >> /etc/tinyproxy/tinyproxy.conf && \
+    echo "Listen 0.0.0.0" >> /etc/tinyproxy/tinyproxy.conf && \
+    echo "Port 8002" >> /etc/tinyproxy/tinyproxy.conf
 
 # Expose the proxy port
 EXPOSE 8002
@@ -20,5 +22,5 @@ RUN chmod +x /start.sh
 # Run the container as root
 USER root
 
-# Start the VPN and proxy server with kill switch
+# Start the VPN and proxy server with a kill switch
 CMD ["/start.sh"]

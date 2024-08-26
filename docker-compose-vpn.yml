@@ -5,13 +5,16 @@ services:
       dockerfile: Dockerfile.vpn
     ports:
       - "8002:8002"
-    image: vpn_setup:v1.3
+    image: vpn_setup:v1.4
     cap_add:
       - NET_ADMIN
     privileged: true
     volumes:
       - $HOME/vpn-servers/cong:/vpn-servers
-      - $HOME/secrets/surfshark_credentials.txt:/secrets/surfshark_credentials.txt
-    environment:
-      - TINYPROXY_PORT=8002
-    network_mode: "host"
+      - $HOME/secrets:/secrets
+    networks:
+      - server_setup_internal-net
+
+networks:
+  server_setup_internal-net:
+    external: true
