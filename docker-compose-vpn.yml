@@ -25,3 +25,9 @@ services:
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
       - UPDATER_PERIOD=12h
       - HTTPPROXY=on  # Ensure the HTTP proxy is enabled
+    networks:
+      - server_setup_internal-net  # Connect to the same network as other containers
+
+networks:
+  server_setup_internal-net:
+    external: true  # Ensure the network is external and shared
