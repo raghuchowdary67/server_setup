@@ -1,20 +1,27 @@
 services:
-  vpn-proxy:
-    build:
-      context: .
-      dockerfile: Dockerfile.vpn
-    ports:
-      - "8002:8002"
-    image: vpn_setup:v1.4
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    # line above must be uncommented to allow external containers to connect.
+    # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
     cap_add:
       - NET_ADMIN
-    privileged: true
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 8888:8888/tcp # HTTP proxy
+    env_file:
+      - ${HOME}/secrets/.env
     volumes:
-      - $HOME/vpn-servers/cong:/vpn-servers
+      - $HOME/vpn-servers:/gluetun
       - $HOME/secrets:/secrets
-    networks:
-      - server_setup_internal-net
-
-networks:
-  server_setup_internal-net:
-    external: true
+    environment:
+      - VPN_SERVICE_PROVIDER=surfshark
+      - VPN_TYPE=openvpn
+      - TZ=America/New_York
+      - SERVER_COUNTRIES=United States
+      - SERVER_CITIES=Dallas,Houston
+      # Server list updater
+      # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+      - UPDATER_PERIOD=12h
+      - HTTPPROXY=on  # Ensure the HTTP proxy is enabled
