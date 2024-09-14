@@ -386,8 +386,9 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
   echo "Cleaning up old Docker images..."
   docker image prune -f
 
-elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
+elif [ "$SYSTEM_TYPE" == "Load Balancer" ]; then
   clone_server_setup
+  cd "$HOME"/server_setup || exit
   setup_python_env "$INSTANCE_TYPE"
 
   read -r -p "Do you want to include Redis? (yes/no): " include_redis
@@ -398,6 +399,18 @@ elif [ "$SYSTEM_TYPE" == "Load Balancer" ] || [ "$SYSTEM_TYPE" == "Tunnel/Proxy"
       echo "Running server_setup only..."
       docker compose up -d server_setup
     fi
+
+  # Clean up old Docker images
+  echo "Cleaning up old Docker images..."
+  docker image prune -f
+
+elif [ "$SYSTEM_TYPE" == "Tunnel/Proxy" ]; then
+  clone_server_setup
+  cd "$HOME"/server_setup || exit
+  setup_python_env "$INSTANCE_TYPE"
+
+  echo "Running VPN setup..."
+  docker compose -f docker-compose-vpn.yml up --build -d
 
   # Clean up old Docker images
   echo "Cleaning up old Docker images..."
