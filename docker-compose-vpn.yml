@@ -20,14 +20,19 @@ services:
       - VPN_SERVICE_PROVIDER=surfshark
       - VPN_TYPE=openvpn
       - TZ=America/New_York
-      - SERVER_COUNTRIES=United States
-      - SERVER_CITIES=Dallas,Houston
+      - SERVER_COUNTRIES=United States,Canada,Netherlands,Germany
+      - SERVER_CITIES=Dallas,Houston,Chicago,New York,Los Angeles,Toronto,Amsterdam,Berlin
       # Server list updater
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
-      - UPDATER_PERIOD=12h
+      - UPDATER_PERIOD=6h
       - HTTPPROXY=on  # Ensure the HTTP proxy is enabled
     networks:
       - server_setup_internal-net  # Connect to the same network as other containers
+    healthcheck:
+      test: [ "CMD", "pgrep", "openvpn" ]  # Example health check using OpenVPN process status
+      interval: 1m
+      timeout: 10s
+      retries: 3
 
 networks:
   server_setup_internal-net:
