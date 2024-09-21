@@ -1,5 +1,5 @@
+import requests  # to make external HTTP requests
 import logging
-
 from flask import Flask, jsonify, request
 import psutil
 import os
@@ -27,6 +27,8 @@ client = docker.from_env()
 home = "/home/redbull"
 system_type = os.getenv('SYSTEM_TYPE', 'Main Server')
 instance_type = os.getenv('INSTANCE_TYPE', 'EC2_UBUNTU')
+
+vpn_container_name = 'gluetun'
 
 ns = api.namespace('monitor', description='Monitoring operations')
 
@@ -86,6 +88,17 @@ service_restart_model = api.model('ServiceRestart', {
 
 service_stop_model = api.model('ServiceStop', {
     'service': fields.String(required=True, description='Service to stop (e.g., server, db, redis)')
+})
+
+# Define models
+url_test_model = api.model('UrlTest', {
+    'url': fields.String(required=True, description='URL to test'),
+    'use_vpn': fields.Boolean(description='Use VPN for the request', default=True)
+})
+
+vpn_control_model = api.model('VpnControl', {
+    'action': fields.String(required=True, description='Action to perform on VPN container', enum=['start', 'stop', 'restart', 'switch']),
+    'server': fields.String(description='Optional server name for switching')
 })
 
 
@@ -368,6 +381,88 @@ class ServiceOperation(Resource):
         except subprocess.CalledProcessError as e:
             return {'message': e.stderr.decode()}, 500
 
+
+# VPN Health Check Endpoint
+@ns.route('/vpn/health')
+class VpnHealthCheck(Resource):
+    @ns.doc('vpn_health_check', description="Check the health of the VPN container.")
+    def get(self):
+        """
+        Check if the VPN container is running and healthy.
+        """
+        try:
+            vpn_container = client.containers.get(vpn_container_name)
+            health_status = vpn_container.attrs['State']['Health']['Status'] if 'Health' in vpn_container.attrs['State'] else 'Unknown'
+            return jsonify({'status': health_status, 'running': vpn_container.status == 'running'})
+        except docker.errors.NotFound:
+            return jsonify({'status': 'Container not found', 'running': False}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
+# VPN Control (start, stop, restart, switch)
+@ns.route('/vpn/control')
+class VpnControl(Resource):
+    @ns.doc('vpn_control', description="Control the VPN container (start, stop, restart, switch).")
+    @ns.expect(vpn_control_model)
+    def post(self):
+        """
+        Control the VPN container by starting, stopping, restarting, or switching servers.
+        """
+        action = request.json.get('action')
+        server = request.json.get('server', None)
+        try:
+            vpn_container = client.containers.get(vpn_container_name)
+            if action == 'start':
+                vpn_container.start()
+                return {'message': 'VPN started'}, 200
+            elif action == 'stop':
+                vpn_container.stop()
+                return {'message': 'VPN stopped'}, 200
+            elif action == 'restart':
+                vpn_container.restart()
+                return {'message': 'VPN restarted'}, 200
+            elif action == 'switch':
+                if not server:
+                    return {'message': 'Server name is required for switching'}, 400
+                # Modify environment and restart the container to switch servers
+                vpn_container.stop()
+                vpn_container.reload()
+                vpn_container.update(environment={'SERVER_COUNTRIES': server})
+                vpn_container.start()
+                return {'message': f'VPN switched to server: {server}'}, 200
+            else:
+                return {'message': 'Invalid action'}, 400
+        except docker.errors.NotFound:
+            return {'message': 'VPN container not found'}, 404
+        except Exception as e:
+            return {'message': str(e)}, 500
+
+
+# Proxy URL Request with Optional VPN
+@ns.route('/vpn/test-url')
+class VpnTestUrl(Resource):
+    @ns.doc('vpn_test_url', description="Test a URL with an option to use the VPN proxy.")
+    @ns.expect(url_test_model)
+    def post(self):
+        """
+        Test a URL by either routing it through the VPN proxy or bypassing it.
+        """
+        url = request.json.get('url')
+        use_vpn = request.json.get('use_vpn', True)
+
+        try:
+            if use_vpn:
+                # Make request using the VPN proxy
+                proxies = {'http': 'http://localhost:8888', 'https': 'http://localhost:8888'}
+                response = requests.get(url, proxies=proxies)
+            else:
+                # Make request without VPN
+                response = requests.get(url)
+
+            return {'url': url, 'status_code': response.status_code, 'content': response.text}, 200
+        except requests.RequestException as e:
+            return {'error': str(e)}, 500
 
 @ns.route('/health')
 class HealthCheck(Resource):
