@@ -452,15 +452,23 @@ class VpnTestUrl(Resource):
         """
         url = request.json.get('url')
         use_vpn = request.json.get('use_vpn', True)
+        # Define common headers like User-Agent, Accept-Language, etc.
+        common_headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,"
+                      "*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language": "en-US,en;q=0.9",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/122.0.0.0 Safari/537.36"
+        }
 
         try:
             if use_vpn:
                 # Make request using the VPN proxy
                 proxies = {'http': 'http://gluetun:8888', 'https': 'http://gluetun:8888'}
-                response = requests.get(url, proxies=proxies)
+                response = requests.get(url, headers=common_headers, proxies=proxies)
             else:
                 # Make request without VPN
-                response = requests.get(url)
+                response = requests.get(url, headers=common_headers)
 
             return {'url': url, 'status_code': response.status_code, 'content': response.json()}, 200
         except requests.RequestException as e:
