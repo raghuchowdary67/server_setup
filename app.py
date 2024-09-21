@@ -469,8 +469,20 @@ class VpnTestUrl(Resource):
             else:
                 # Make request without VPN
                 response = requests.get(url, headers=common_headers)
+            # Get content type from the response
+            content_type = response.headers.get('Content-Type', '').lower()
 
-            return {'url': url, 'status_code': response.status_code, 'content': response.json()}, 200
+            # Dynamically handle the content based on content type
+            if 'application/json' in content_type:
+                content = response.json()
+            elif 'text/plain' in content_type:
+                content = response.text
+            elif 'text/html' in content_type:
+                content = response.text
+            else:
+                content = response.content  # Return raw content if the type is unknown
+
+            return {'url': url, 'status_code': response.status_code, 'content': content}, 200
         except requests.RequestException as e:
             return {'error': str(e)}, 500
 
