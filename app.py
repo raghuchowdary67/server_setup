@@ -97,7 +97,8 @@ url_test_model = api.model('UrlTest', {
 })
 
 vpn_control_model = api.model('VpnControl', {
-    'action': fields.String(required=True, description='Action to perform on VPN container', enum=['start', 'stop', 'restart', 'switch']),
+    'action': fields.String(required=True, description='Action to perform on VPN container',
+                            enum=['start', 'stop', 'restart', 'switch']),
     'server': fields.String(description='Optional server name for switching')
 })
 
@@ -392,7 +393,8 @@ class VpnHealthCheck(Resource):
         """
         try:
             vpn_container = client.containers.get(vpn_container_name)
-            health_status = vpn_container.attrs['State']['Health']['Status'] if 'Health' in vpn_container.attrs['State'] else 'Unknown'
+            health_status = vpn_container.attrs['State']['Health']['Status'] if 'Health' in vpn_container.attrs[
+                'State'] else 'Unknown'
             return jsonify({'status': health_status, 'running': vpn_container.status == 'running'})
         except docker.errors.NotFound:
             return jsonify({'status': 'Container not found', 'running': False}), 404
@@ -454,15 +456,16 @@ class VpnTestUrl(Resource):
         try:
             if use_vpn:
                 # Make request using the VPN proxy
-                proxies = {'http': 'http://localhost:8888', 'https': 'http://localhost:8888'}
+                proxies = {'http': 'http://gluetun:8888', 'https': 'http://gluetun:8888'}
                 response = requests.get(url, proxies=proxies)
             else:
                 # Make request without VPN
                 response = requests.get(url)
 
-            return {'url': url, 'status_code': response.status_code, 'content': response.text}, 200
+            return {'url': url, 'status_code': response.status_code, 'content': response.json()}, 200
         except requests.RequestException as e:
             return {'error': str(e)}, 500
+
 
 @ns.route('/health')
 class HealthCheck(Resource):
