@@ -22,6 +22,8 @@ services:
       - TZ=America/New_York
       - SERVER_COUNTRIES=United States,Canada,Netherlands,Germany
       - SERVER_CITIES=Dallas,Houston,Chicago,New York,Los Angeles,Toronto,Amsterdam,Berlin
+      - MAX_FAILING_SERVERS=3  # The number of failing servers before switching
+      - VPN_RETRY_COUNT=5  # Number of retries before switching to another server
       # Server list updater
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
       - UPDATER_PERIOD=6h
