@@ -1,3 +1,6 @@
+import queue
+import threading
+
 import requests  # to make external HTTP requests
 import logging
 from flask import Flask, jsonify, request, Response
@@ -505,6 +508,9 @@ def update_db_credentials(new_env):
 # Store active streams (stream_id -> stream details)
 active_streams = {}
 
+# In-memory buffer for streaming data
+stream_buffers = {}
+
 
 def start_ffmpeg(stream_id, stream_url):
     """Starts an FFmpeg process for a given stream_id and URL."""
@@ -525,6 +531,20 @@ def start_ffmpeg(stream_id, stream_url):
         'process': process,
         'clients': 0
     }
+    # Initialize a thread-safe queue for buffering
+    stream_buffers[stream_id] = queue.Queue(maxsize=10)  # Limit the size of the buffer
+
+    # Start a thread to read from the FFmpeg process and populate the buffer
+    def buffer_stream():
+        while True:
+            chunk = process.stdout.read(1024)
+            if not chunk:
+                break
+            if stream_buffers[stream_id].full():
+                stream_buffers[stream_id].get()  # Remove oldest chunk if full
+            stream_buffers[stream_id].put(chunk)
+
+    threading.Thread(target=buffer_stream, daemon=True).start()
     return process
 
 
@@ -548,23 +568,26 @@ class Restream(Resource):
         def generate():
             try:
                 while True:
-                    chunk = process.stdout.read(1024)
+                    chunk = stream_buffers[stream_id].get()  # Get from the buffer
                     if not chunk:
                         break
                     yield chunk
             except Exception as e:
-                logger.info(f"Error reading stream {stream_id}: {e}")
+                logger.error(f"Error reading stream {stream_id}: {e}")
             finally:
-                logger.info(f"Closing connection for {stream_id}")
+                logger.info(f"Stream closed for {stream_id}")
 
         response = Response(generate(), content_type='video/mp2t')
 
         @response.call_on_close
         def on_close():
             active_streams[stream_id]['clients'] -= 1
+            logger.info(f"Client disconnected from stream {stream_id}, remaining clients: "
+                        f"{active_streams[stream_id]['clients']}")
             if active_streams[stream_id]['clients'] == 0:
                 process.kill()
                 del active_streams[stream_id]
+                del stream_buffers[stream_id]  # Clean up the buffer
                 logger.info(f"Stopped stream {stream_id}")
 
         return response
