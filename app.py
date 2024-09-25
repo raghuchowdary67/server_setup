@@ -507,15 +507,18 @@ def update_db_credentials(new_env):
 
 # Store active streams (stream_id -> stream details)
 active_streams = {}
-stream_buffers = {}
 
 
 def start_ffmpeg(stream_id, stream_url):
     """Starts an FFmpeg process for a given stream_id and URL."""
     ffmpeg_command = [
         'ffmpeg', '-re', '-i', stream_url,
-        '-c', 'copy', '-f', 'mpegts',
-        '-fflags', 'nobuffer', '-flush_packets', '1',
+        '-c:v', 'copy', '-c:a', 'aac',  # Use AAC for audio
+        '-b:a', '128k',  # Set audio bitrate
+        '-f', 'mpegts',
+        '-fflags', 'nobuffer',
+        '-flush_packets', '1',
+        '-preset', 'ultrafast',
         'pipe:1'
     ]
 
@@ -525,29 +528,20 @@ def start_ffmpeg(stream_id, stream_url):
 
     active_streams[stream_id] = {
         'process': process,
-        'clients': 0
+        'clients': 0,
+        'stream_data': []
     }
 
-    # Initialize a thread-safe queue for buffering
-    stream_buffers[stream_id] = queue.Queue(maxsize=10)  # Limit the size of the buffer
-
-    # Start a thread to read from the FFmpeg process and populate the buffer
-    def buffer_stream():
+    # Start a thread to read from the FFmpeg process
+    def read_stream():
         while True:
-            chunk = process.stdout.read(1024)
+            chunk = process.stdout.read(4096)
             if not chunk:
                 logger.error(f"Stream ended for {stream_id}")
                 break
+            active_streams[stream_id]['stream_data'].append(chunk)
 
-            if stream_buffers[stream_id].full():
-                stream_buffers[stream_id].get()  # Remove the oldest chunk if full
-
-            stream_buffers[stream_id].put(chunk)
-
-        # Clean up when the stream ends
-        del stream_buffers[stream_id]
-
-    threading.Thread(target=buffer_stream, daemon=True).start()
+    threading.Thread(target=read_stream, daemon=True).start()
     return process
 
 
@@ -569,16 +563,11 @@ class Restream(Resource):
         active_streams[stream_id]['clients'] += 1
 
         def generate():
-            try:
-                while True:
-                    chunk = stream_buffers[stream_id].get()  # Get from the buffer
-                    if chunk is None:
-                        break
-                    yield chunk
-            except Exception as e:
-                logger.error(f"Error reading stream {stream_id}: {e}")
-            finally:
-                logger.info(f"Stream closed for {stream_id}")
+            while True:
+                if active_streams[stream_id]['stream_data']:
+                    yield active_streams[stream_id]['stream_data'].pop(0)
+                else:
+                    time.sleep(0.1)  # Prevent busy waiting
 
         response = Response(generate(), content_type='video/mp2t')
 
