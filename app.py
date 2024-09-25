@@ -3,6 +3,7 @@ import os
 import subprocess
 import threading
 import time
+from collections import deque
 
 import docker
 import psutil
@@ -509,6 +510,22 @@ def update_db_credentials(new_env):
 active_streams = {}
 
 
+class StreamBuffer:
+    def __init__(self):
+        self.buffer = deque()
+        self.lock = threading.Lock()
+
+    def append(self, data):
+        with self.lock:
+            self.buffer.append(data)
+
+    def get_chunk(self):
+        with self.lock:
+            if self.buffer:
+                return self.buffer.popleft()
+            return None
+
+
 def start_ffmpeg(stream_id, stream_url):
     """Starts an FFmpeg process for a given stream_id and URL."""
     ffmpeg_command = [
@@ -518,7 +535,6 @@ def start_ffmpeg(stream_id, stream_url):
         '-f', 'mpegts',
         '-fflags', 'nobuffer',
         '-flush_packets', '1',
-        '-preset', 'ultrafast',
         'pipe:1'
     ]
 
@@ -526,22 +542,24 @@ def start_ffmpeg(stream_id, stream_url):
         ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=10 ** 6
     )
 
+    # Initialize stream buffer
     active_streams[stream_id] = {
         'process': process,
         'clients': 0,
-        'stream_data': []
+        'buffer': StreamBuffer()  # Shared buffer for this stream
     }
 
     # Start a thread to read from the FFmpeg process
     def read_stream():
         while True:
-            chunk = process.stdout.read(4096)
+            chunk = process.stdout.read(4096)  # Read larger chunks to fill the buffer
             if not chunk:
                 logger.error(f"Stream ended for {stream_id}")
                 break
-            active_streams[stream_id]['stream_data'].append(chunk)
+            active_streams[stream_id]['buffer'].append(chunk)
 
     threading.Thread(target=read_stream, daemon=True).start()
+
     return process
 
 
@@ -556,16 +574,19 @@ class Restream(Resource):
         if not stream_url:
             return {"error": "stream_url is required"}, 400
 
+        # Start FFmpeg if the stream is not already active
         if stream_id not in active_streams:
             start_ffmpeg(stream_id, stream_url)
 
-        process = active_streams[stream_id]['process']
+        # Update the client count for the stream
         active_streams[stream_id]['clients'] += 1
+        process = active_streams[stream_id]['process']
 
         def generate():
             while True:
-                if active_streams[stream_id]['stream_data']:
-                    yield active_streams[stream_id]['stream_data'].pop(0)
+                chunk = active_streams[stream_id]['buffer'].get_chunk()
+                if chunk:
+                    yield chunk
                 else:
                     time.sleep(0.1)  # Prevent busy waiting
 
