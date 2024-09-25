@@ -532,7 +532,7 @@ def start_ffmpeg(stream_id, stream_url):
 class Restream(Resource):
     @ns.doc('restream')
     def get(self, stream_id):
-        print(f"Stream starting for: {stream_id}")
+        logger.info(f"Stream starting for: {stream_id}")
         # stream_url = request.args.get('url')
         stream_url = "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
 
@@ -553,9 +553,9 @@ class Restream(Resource):
                         break
                     yield chunk
             except Exception as e:
-                print(f"Error reading stream {stream_id}: {e}")
+                logger.info(f"Error reading stream {stream_id}: {e}")
             finally:
-                print(f"Closing connection for {stream_id}")
+                logger.info(f"Closing connection for {stream_id}")
 
         response = Response(generate(), content_type='video/mp2t')
 
@@ -565,7 +565,7 @@ class Restream(Resource):
             if active_streams[stream_id]['clients'] == 0:
                 process.kill()
                 del active_streams[stream_id]
-                print(f"Stopped stream {stream_id}")
+                logger.info(f"Stopped stream {stream_id}")
 
         return response
 
