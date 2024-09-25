@@ -509,10 +509,18 @@ active_streams = {}
 def start_ffmpeg(stream_id, stream_url):
     """Starts an FFmpeg process for a given stream_id and URL."""
     ffmpeg_command = [
-        'ffmpeg', '-re', '-i', "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", '-c', 'copy', '-f', 'mpegts',
-        'pipe:1'
+        'ffmpeg', '-re', '-i', stream_url,  # Use provided stream_url
+        '-c', 'copy',  # Copy both audio and video
+        '-f', 'mpegts',  # Output format
+        '-fflags', 'nobuffer',  # Reduce delay by disabling buffering
+        '-flush_packets', '1',  # Flush packets immediately
+        'pipe:1'  # Output to stdout for streaming
     ]
-    process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
+
+    process = subprocess.Popen(
+        ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=10 ** 6
+    )
+
     active_streams[stream_id] = {
         'process': process,
         'clients': 0
@@ -524,7 +532,11 @@ def start_ffmpeg(stream_id, stream_url):
 class Restream(Resource):
     @ns.doc('restream')
     def get(self, stream_id):
-        stream_url = request.args.get('url')
+        # stream_url = request.args.get('url')
+        stream_url = "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+
+        if not stream_url:
+            return {"error": "stream_url is required"}, 400
 
         if stream_id not in active_streams:
             start_ffmpeg(stream_id, stream_url)
@@ -533,18 +545,26 @@ class Restream(Resource):
         active_streams[stream_id]['clients'] += 1
 
         def generate():
-            for chunk in iter(lambda: process.stdout.read(1024), b''):
-                yield chunk
+            try:
+                while True:
+                    chunk = process.stdout.read(1024)
+                    if not chunk:
+                        break
+                    yield chunk
+            except Exception as e:
+                print(f"Error reading stream {stream_id}: {e}")
+            finally:
+                print(f"Closing connection for {stream_id}")
 
         response = Response(generate(), content_type='video/mp2t')
 
         @response.call_on_close
         def on_close():
-            print("The item is closed")
             active_streams[stream_id]['clients'] -= 1
             if active_streams[stream_id]['clients'] == 0:
                 process.kill()
                 del active_streams[stream_id]
+                print(f"Stopped stream {stream_id}")
 
         return response
 
