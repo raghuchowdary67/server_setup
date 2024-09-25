@@ -132,9 +132,13 @@ if ! groups "$CURRENT_USER" | grep -q '\bdocker\b'; then
   echo "Adding $CURRENT_USER to the Docker group..."
   sudo usermod -aG docker "$CURRENT_USER"
   echo "You need to log out and back in for the changes to take effect."
+  echo "Alternatively, you can run 'newgrp docker' to apply the changes in the current session."
 else
   echo "$CURRENT_USER is already in the Docker group."
 fi
+
+# Fix Docker socket permissions for immediate use
+sudo chmod 666 /var/run/docker.sock
 
 # Install Docker Compose
 if ! command -v docker-compose &> /dev/null; then
@@ -247,44 +251,58 @@ EOL
 # Function to set up Python environment
 setup_python_env() {
   local env_type=$1
-
   if [ "$env_type" == "EC2_AMI" ]; then
-    echo "Python installing for EC2_AMI"
+    echo "Checking for Python installation on EC2_AMI"
+
     if ! command -v python3 &> /dev/null; then
       sudo yum install python3 -y
-      sudo yum install python3-pip -y
     else
       echo "Python is already installed."
     fi
+
+    echo "Checking for python3-pip installation on EC2_AMI"
+    if ! rpm -q python3-pip &> /dev/null; then
+      echo "Installing python3-pip"
+      sudo yum install python3-pip -y
+    else
+      echo "python3-pip is already installed."
+    fi
+
   else
-    echo "Python installing for $env_type"
+    echo "Checking for Python installation on $env_type"
+
     if ! command -v python3 &> /dev/null; then
       sudo apt-get update
       sudo apt-get install python3 -y
-      sudo apt-get install python3-venv -y
-      sudo apt-get install python3-pip -y
-      # Install cloud-utils only if env_type contains EC2_
-      if [[ "$env_type" == EC2_* ]]; then
-        sudo apt-get install cloud-utils
-      fi
     else
       echo "Python is already installed."
     fi
-  fi
 
-  if [ ! -d "$HOME/server_setup/monitoring_env" ]; then
-    python3 -m venv "$HOME/server_setup/monitoring_env"
-    source "$HOME/server_setup/monitoring_env/bin/activate"
-    # Install psutil
-    pip3 install psutil
-
-    # Install boto3 only if env_type contains EC2_
-    if [[ "$env_type" == EC2_* ]]; then
-      pip3 install boto3
+    echo "Checking for python3-venv installation on $env_type"
+    if ! dpkg -l | grep -q python3-venv; then
+      echo "Installing python3-venv"
+      sudo apt-get install python3-venv -y
+    else
+      echo "python3-venv is already installed."
     fi
-  else
-    echo "Virtual environment already exists."
-    source "$HOME/server_setup/monitoring_env/bin/activate"
+
+    echo "Checking for python3-pip installation on $env_type"
+    if ! dpkg -l | grep -q python3-pip; then
+      echo "Installing python3-pip"
+      sudo apt-get install python3-pip -y
+    else
+      echo "python3-pip is already installed."
+    fi
+
+    # Install cloud-utils only if env_type contains EC2_
+    if [[ "$env_type" == EC2_* ]]; then
+      if ! dpkg -l | grep -q cloud-utils; then
+        echo "Installing cloud-utils"
+        sudo apt-get install cloud-utils -y
+      else
+        echo "cloud-utils is already installed."
+      fi
+    fi
   fi
 }
 
