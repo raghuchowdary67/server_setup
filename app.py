@@ -532,6 +532,7 @@ def start_ffmpeg(stream_id, stream_url):
 class Restream(Resource):
     @ns.doc('restream')
     def get(self, stream_id):
+        print(f"Stream starting for: {stream_id}")
         # stream_url = request.args.get('url')
         stream_url = "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
 
