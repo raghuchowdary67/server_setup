@@ -1,6 +1,6 @@
 import requests  # to make external HTTP requests
 import logging
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 import psutil
 import os
 import subprocess
@@ -500,6 +500,50 @@ def update_db_credentials(new_env):
         f"mysql -u root -p {new_env['MYSQL_ROOT_PASSWORD']} -e \"ALTER USER '{new_env['MYSQL_USER']}'@'%' IDENTIFIED BY '{new_env['MYSQL_PASSWORD']}';\""
     )
     mariadb_container.restart()
+
+
+# Store active streams (stream_id -> stream details)
+active_streams = {}
+
+
+def start_ffmpeg(stream_id, stream_url):
+    """Starts an FFmpeg process for a given stream_id and URL."""
+    ffmpeg_command = [
+        'ffmpeg', '-re', '-i', "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8", '-c', 'copy', '-f', 'mpegts', 'pipe:1'
+    ]
+    process = subprocess.Popen(ffmpeg_command, stdout=subprocess.PIPE)
+    active_streams[stream_id] = {
+        'process': process,
+        'clients': 0
+    }
+    return process
+
+
+@ns.route('/restream/<stream_id>')
+def restream(stream_id):
+    stream_url = request.args.get('url')
+
+    if stream_id not in active_streams:
+        start_ffmpeg(stream_id, stream_url)
+
+    process = active_streams[stream_id]['process']
+    active_streams[stream_id]['clients'] += 1
+
+    def generate():
+        for chunk in iter(lambda: process.stdout.read(1024), b''):
+            yield chunk
+
+    response = Response(generate(), content_type='video/mp2t')
+
+    @response.call_on_close
+    def on_close():
+        print("The item is closed")
+        active_streams[stream_id]['clients'] -= 1
+        if active_streams[stream_id]['clients'] == 0:
+            process.kill()
+            del active_streams[stream_id]
+
+    return response
 
 
 if __name__ == '__main__':

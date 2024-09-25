@@ -143,3 +143,12 @@ docker rmi $(docker images -q redbull-admin-backend)
 start the vpn docker compose:
 
 docker compose -f docker-compose-vpn.yml up --build -d
+
+curl -X 'POST' \
+  'http://192.168.1.105:5000/monitor/vpn/test-url' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "url": "http://harnhrt.leadervpn.xyz/player_api.php?username=pavan5544&password=8682783180",
+  "use_vpn": true
+}'
