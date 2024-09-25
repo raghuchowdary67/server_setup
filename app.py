@@ -507,20 +507,16 @@ def update_db_credentials(new_env):
 
 # Store active streams (stream_id -> stream details)
 active_streams = {}
-
-# In-memory buffer for streaming data
 stream_buffers = {}
 
 
 def start_ffmpeg(stream_id, stream_url):
     """Starts an FFmpeg process for a given stream_id and URL."""
     ffmpeg_command = [
-        'ffmpeg', '-re', '-i', stream_url,  # Use provided stream_url
-        '-c', 'copy',  # Copy both audio and video
-        '-f', 'mpegts',  # Output format
-        '-fflags', 'nobuffer',  # Reduce delay by disabling buffering
-        '-flush_packets', '1',  # Flush packets immediately
-        'pipe:1'  # Output to stdout for streaming
+        'ffmpeg', '-re', '-i', stream_url,
+        '-c', 'copy', '-f', 'mpegts',
+        '-fflags', 'nobuffer', '-flush_packets', '1',
+        'pipe:1'
     ]
 
     process = subprocess.Popen(
@@ -531,6 +527,7 @@ def start_ffmpeg(stream_id, stream_url):
         'process': process,
         'clients': 0
     }
+
     # Initialize a thread-safe queue for buffering
     stream_buffers[stream_id] = queue.Queue(maxsize=10)  # Limit the size of the buffer
 
@@ -539,10 +536,16 @@ def start_ffmpeg(stream_id, stream_url):
         while True:
             chunk = process.stdout.read(1024)
             if not chunk:
+                logger.error(f"Stream ended for {stream_id}")
                 break
+
             if stream_buffers[stream_id].full():
-                stream_buffers[stream_id].get()  # Remove oldest chunk if full
+                stream_buffers[stream_id].get()  # Remove the oldest chunk if full
+
             stream_buffers[stream_id].put(chunk)
+
+        # Clean up when the stream ends
+        del stream_buffers[stream_id]
 
     threading.Thread(target=buffer_stream, daemon=True).start()
     return process
@@ -553,8 +556,8 @@ class Restream(Resource):
     @ns.doc('restream')
     def get(self, stream_id):
         logger.info(f"Stream starting for: {stream_id}")
-        # stream_url = request.args.get('url')
-        stream_url = "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+
+        stream_url = request.args.get('url', "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
 
         if not stream_url:
             return {"error": "stream_url is required"}, 400
@@ -569,7 +572,7 @@ class Restream(Resource):
             try:
                 while True:
                     chunk = stream_buffers[stream_id].get()  # Get from the buffer
-                    if not chunk:
+                    if chunk is None:
                         break
                     yield chunk
             except Exception as e:
@@ -582,12 +585,11 @@ class Restream(Resource):
         @response.call_on_close
         def on_close():
             active_streams[stream_id]['clients'] -= 1
-            logger.info(f"Client disconnected from stream {stream_id}, remaining clients: "
-                        f"{active_streams[stream_id]['clients']}")
+            logger.info(
+                f"Client disconnected from stream {stream_id}, remaining clients: {active_streams[stream_id]['clients']}")
             if active_streams[stream_id]['clients'] == 0:
                 process.kill()
                 del active_streams[stream_id]
-                del stream_buffers[stream_id]  # Clean up the buffer
                 logger.info(f"Stopped stream {stream_id}")
 
         return response
