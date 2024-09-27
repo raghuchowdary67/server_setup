@@ -527,7 +527,7 @@ class StreamBuffer:
 
 
 def start_ffmpeg(stream_id, stream_url):
-    """Starts an FFmpeg process for a given stream_id and URL."""
+    """Starts an FFmpeg process for a given stream_id and URL with error handling."""
     ffmpeg_command = [
         'ffmpeg', '-re', '-i', stream_url,
         '-c:v', 'copy', '-c:a', 'aac',  # Use AAC for audio
@@ -546,30 +546,52 @@ def start_ffmpeg(stream_id, stream_url):
     active_streams[stream_id] = {
         'process': process,
         'clients': defaultdict(lambda: {'buffer': StreamBuffer(), 'active': True}),
-        'stop': False
+        'stop': False,
+        'last_chunk_time': time.time()  # Track when the last chunk was received
     }
 
-    def read_stream():
-        try:
-            if stream_id in active_streams:
-                while not active_streams[stream_id]['stop']:
-                    chunk = process.stdout.read(4096)
-                    if not chunk:
-                        logger.info(f"Source stream ended for {stream_id}. Stopping restream.")
-                        break
+    def monitor_process():
+        """Monitor FFmpeg process and restart if it crashes or exits."""
+        while not active_streams[stream_id]['stop']:
+            stderr_output = process.stderr.readline()
+            if stderr_output:
+                logger.error(f"FFmpeg error in stream {stream_id}: {stderr_output.decode()}")
+                # Restart FFmpeg if an error is detected
+                if "Error" in stderr_output.decode():
+                    logger.info(f"Restarting FFmpeg for stream {stream_id} due to an error.")
+                    cleanup_stream(stream_id)  # Cleanup the current process
+                    start_ffmpeg(stream_id, stream_url)  # Restart FFmpeg
+                    return
 
-                    # Append chunk to all active clients
-                    for client_data in list(active_streams[stream_id]['clients'].values()):
-                        if client_data['active']:
-                            client_data['buffer'].append(chunk)
-            else:
-                logger.info(f"Stream {stream_id} was removed or stopped..")
+    def read_stream():
+        """Read the FFmpeg process output and distribute to clients."""
+        try:
+            while not active_streams[stream_id]['stop']:
+                chunk = process.stdout.read(4096)
+                if not chunk:
+                    logger.info(f"Source stream ended for {stream_id}. Stopping restream.")
+                    break
+
+                active_streams[stream_id]['last_chunk_time'] = time.time()  # Update the last received chunk time
+
+                # Append chunk to all active clients
+                for client_data in list(active_streams[stream_id]['clients'].values()):
+                    if client_data['active']:
+                        client_data['buffer'].append(chunk)
+
+                # Timeout detection - Restart the process if no data is received for a while
+                if time.time() - active_streams[stream_id]['last_chunk_time'] > 10:
+                    logger.warning(f"Stream {stream_id} timed out. Restarting.")
+                    cleanup_stream(stream_id)
+                    start_ffmpeg(stream_id, stream_url)
+                    return
         except Exception as e:
             logger.error(f"Error while reading stream {stream_id}: {e}")
         finally:
             cleanup_stream(stream_id)
 
     threading.Thread(target=read_stream, daemon=True).start()
+    threading.Thread(target=monitor_process, daemon=True).start()
     return process
 
 
@@ -600,6 +622,9 @@ class Restream(Resource):
         client_data = active_streams[stream_id]['clients'][username]
         client_data['active'] = True
 
+        # Clear buffer on reconnect to prevent old chunks from being sent
+        client_data['buffer'] = StreamBuffer()
+
         process = active_streams[stream_id]['process']
 
         def generate():
@@ -608,7 +633,7 @@ class Restream(Resource):
                 if chunk:
                     yield chunk
                 else:
-                    time.sleep(0.1)  # Prevent busy waiting
+                    time.sleep(0.1)
 
         response = Response(generate(), content_type='video/mp2t')
 
