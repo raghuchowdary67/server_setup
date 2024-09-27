@@ -612,18 +612,27 @@ class Restream(Resource):
     def get(self, stream_id, username):
         logger.info(f"Stream starting for: {stream_id}, User: {username}")
 
+        # Get stream URL (fallback to default test stream)
         stream_url = request.args.get('url', "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
         if not stream_url:
             return {"error": "stream_url is required"}, 400
 
+        # Start FFmpeg if the stream is not already active
         if stream_id not in active_streams:
             start_ffmpeg(stream_id, stream_url)
 
+        # Handle client-specific data
         client_data = active_streams[stream_id]['clients'][username]
+
+        # Mark the client as active
         client_data['active'] = True
 
-        # Clear buffer on reconnect to prevent old chunks from being sent
-        client_data['buffer'] = StreamBuffer()
+        # Clear buffer and reset on reconnect to prevent old chunks from being sent
+        if 'buffer' in client_data:
+            logger.info(f"Clearing buffer for user {username} on reconnect")
+            client_data['buffer'] = StreamBuffer()
+        else:
+            client_data['buffer'] = StreamBuffer()
 
         process = active_streams[stream_id]['process']
 
@@ -635,17 +644,24 @@ class Restream(Resource):
                 else:
                     time.sleep(0.1)
 
+        # Response with generated stream data
         response = Response(generate(), content_type='video/mp2t')
 
         @response.call_on_close
         def on_close():
+            # Handle client disconnection
             client_data['active'] = False
             logger.info(f"Client {username} disconnected from stream {stream_id}")
 
-            # If no more clients are active, stop the stream
+            # Fully clean up client if no more clients are active
             if all(not c['active'] for c in active_streams[stream_id]['clients'].values()):
                 logger.info(f"No more clients active. Stopping stream {stream_id}")
                 cleanup_stream(stream_id)
+            else:
+                # Additional safeguard to remove client-specific data
+                if username in active_streams[stream_id]['clients']:
+                    logger.info(f"Cleaning up user {username} data for stream {stream_id}")
+                    del active_streams[stream_id]['clients'][username]
 
         return response
 
