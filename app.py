@@ -550,22 +550,22 @@ def start_ffmpeg(stream_id, stream_url):
         'last_chunk_time': time.time()  # Track when the last chunk was received
     }
 
-    def monitor_process(stream_id):
-    """Monitor FFmpeg process and restart if it crashes or exits."""
-    while stream_id in active_streams and not active_streams[stream_id]['stop']:
-        try:
-            stderr_output = active_streams[stream_id]['process'].stderr.readline()
-            if stderr_output:
-                logger.error(f"FFmpeg error in stream {stream_id}: {stderr_output.decode()}")
-                if "Error" in stderr_output.decode():
-                    logger.info(f"Restarting FFmpeg for stream {stream_id} due to an error.")
-                    cleanup_stream(stream_id)
-                    start_ffmpeg(stream_id, active_streams[stream_id]['url'])
-                    return
-        except KeyError:
-            logger.info(f"Stream {stream_id} has already been stopped and removed.")
-            break
-    logger.info(f"Exiting monitor process for stream {stream_id}.")
+    def monitor_process():
+        """Monitor FFmpeg process and restart if it crashes or exits."""
+        while stream_id in active_streams and not active_streams[stream_id]['stop']:
+            try:
+                stderr_output = active_streams[stream_id]['process'].stderr.readline()
+                if stderr_output:
+                    logger.error(f"FFmpeg error in stream {stream_id}: {stderr_output.decode()}")
+                    if "Error" in stderr_output.decode():
+                        logger.info(f"Restarting FFmpeg for stream {stream_id} due to an error.")
+                        cleanup_stream(stream_id)
+                        start_ffmpeg(stream_id, active_streams[stream_id]['url'])
+                        return
+            except KeyError:
+                logger.info(f"Stream {stream_id} has already been stopped and removed.")
+                break
+        logger.info(f"Exiting monitor process for stream {stream_id}.")
 
     def read_stream():
         """Read the FFmpeg process output and distribute to clients."""
