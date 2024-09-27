@@ -615,15 +615,18 @@ class Restream(Resource):
         def on_close():
             client_data['active'] = False  # Mark the client as inactive
             logger.info(f"Client {username} disconnected from stream {stream_id}")
-
-            # Cleanup the stream if no more clients are active
-            if not any(c['active'] for c in active_streams[stream_id]['clients'].values()):
-                logger.info(f"No more clients active. Stopping stream {stream_id}")
-                active_streams[stream_id]['stop'] = True  # Signal the stream reader thread to stop
-                process.kill()
-                time.sleep(1)  # Give a moment for the stream reader thread to terminate
-                del active_streams[stream_id]
-                logger.info(f"Stopped stream {stream_id}")
+            # Start FFmpeg if the stream is not already active
+            if stream_id in active_streams:
+                # Cleanup the stream if no more clients are active
+                if not any(c['active'] for c in active_streams[stream_id]['clients'].values()):
+                    logger.info(f"No more clients active. Stopping stream {stream_id}")
+                    active_streams[stream_id]['stop'] = True  # Signal the stream reader thread to stop
+                    process.kill()
+                    time.sleep(1)  # Give a moment for the stream reader thread to terminate
+                    del active_streams[stream_id]
+                    logger.info(f"Stopped stream {stream_id}")
+            else:
+                logger.info(f"Stream {stream_id} was already stopped and removed")
 
         return response
 
