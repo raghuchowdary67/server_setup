@@ -539,45 +539,46 @@ def start_ffmpeg(stream_id, stream_url):
     ]
 
     process = subprocess.Popen(
-        ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=10**6
+        ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=10 ** 6
     )
 
     # Initialize stream buffer
     active_streams[stream_id] = {
         'process': process,
-        'clients': defaultdict(lambda: {'buffer': StreamBuffer(), 'active': True}),  # Client-specific buffer
-        'stop': False  # Flag to stop the stream
+        'clients': defaultdict(lambda: {'buffer': StreamBuffer(), 'active': True}),
+        'stop': False
     }
 
-    # Start a thread to read from the FFmpeg process
     def read_stream():
         try:
-            while not active_streams[stream_id]['stop']:  # Continue only if stream is not stopped
-                chunk = process.stdout.read(4096)  # Read larger chunks to fill the buffer
-
-                # Check if the FFmpeg process has ended or the stream has no more data
+            while not active_streams[stream_id]['stop']:
+                chunk = process.stdout.read(4096)
                 if not chunk:
                     logger.info(f"Source stream ended for {stream_id}. Stopping restream.")
-                    break  # Exit loop and stop the stream
+                    break
 
                 # Append chunk to all active clients
-                with threading.Lock():
-                    for client_data in active_streams[stream_id]['clients'].values():
-                        if client_data['active']:
-                            client_data['buffer'].append(chunk)
-        except KeyError:
-            logger.info(f"Stream {stream_id} has already been stopped.")
+                for client_data in list(active_streams[stream_id]['clients'].values()):
+                    if client_data['active']:
+                        client_data['buffer'].append(chunk)
+        except Exception as e:
+            logger.error(f"Error while reading stream {stream_id}: {e}")
         finally:
-            if stream_id in active_streams:
-                active_streams[stream_id]['stop'] = True  # Signal to stop the stream
-                process.kill()  # Ensure FFmpeg is stopped
-                time.sleep(1)  # Give a moment for the stream reader thread to terminate
-                del active_streams[stream_id]  # Remove the stream from active_streams
-                logger.info(f"Stream {stream_id} has been fully terminated.")
+            cleanup_stream(stream_id)
 
     threading.Thread(target=read_stream, daemon=True).start()
-
     return process
+
+
+def cleanup_stream(stream_id):
+    """Ensures proper cleanup of FFmpeg process and resources."""
+    if stream_id in active_streams:
+        logger.info(f"Cleaning up stream {stream_id}")
+        active_streams[stream_id]['stop'] = True
+        process = active_streams[stream_id]['process']
+        process.kill()  # Ensure the FFmpeg process is stopped
+        del active_streams[stream_id]
+        logger.info(f"Stream {stream_id} fully terminated.")
 
 
 @ns.route('/restream/<stream_id>/<username>')
@@ -587,15 +588,12 @@ class Restream(Resource):
         logger.info(f"Stream starting for: {stream_id}, User: {username}")
 
         stream_url = request.args.get('url', "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
-
         if not stream_url:
             return {"error": "stream_url is required"}, 400
 
-        # Start FFmpeg if the stream is not already active
         if stream_id not in active_streams:
             start_ffmpeg(stream_id, stream_url)
 
-        # Mark the client as active
         client_data = active_streams[stream_id]['clients'][username]
         client_data['active'] = True
 
@@ -613,20 +611,13 @@ class Restream(Resource):
 
         @response.call_on_close
         def on_close():
-            client_data['active'] = False  # Mark the client as inactive
+            client_data['active'] = False
             logger.info(f"Client {username} disconnected from stream {stream_id}")
-            # Start FFmpeg if the stream is not already active
-            if stream_id in active_streams:
-                # Cleanup the stream if no more clients are active
-                if not any(c['active'] for c in active_streams[stream_id]['clients'].values()):
-                    logger.info(f"No more clients active. Stopping stream {stream_id}")
-                    active_streams[stream_id]['stop'] = True  # Signal the stream reader thread to stop
-                    process.kill()
-                    time.sleep(1)  # Give a moment for the stream reader thread to terminate
-                    del active_streams[stream_id]
-                    logger.info(f"Stopped stream {stream_id}")
-            else:
-                logger.info(f"Stream {stream_id} was already stopped and removed")
+
+            # If no more clients are active, stop the stream
+            if all(not c['active'] for c in active_streams[stream_id]['clients'].values()):
+                logger.info(f"No more clients active. Stopping stream {stream_id}")
+                cleanup_stream(stream_id)
 
         return response
 

@@ -58,11 +58,11 @@ services:
     networks:
       server_setup_internal-net:
         ipv4_address: 172.20.0.4  # Assign static IP address
-    healthcheck:
-      test: [ "CMD-SHELL", "curl --fail http://localhost:5000/monitor/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+#    healthcheck:
+#      test: [ "CMD-SHELL", "curl --fail http://localhost:5000/monitor/health || exit 1" ]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
 
 volumes:
   mariadb_data:
