@@ -508,7 +508,7 @@ def update_db_credentials(new_env):
 
 # Store active streams (stream_id -> stream details)
 active_streams = {}
-
+active_streams_lock = threading.Lock()  # Lock for accessing active_streams
 
 class StreamBuffer:
     def __init__(self):
@@ -542,38 +542,44 @@ def start_ffmpeg(stream_id, stream_url):
         ffmpeg_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=10**6
     )
 
-    # Initialize stream buffer
-    active_streams[stream_id] = {
-        'process': process,
-        'clients': defaultdict(lambda: {'buffer': StreamBuffer(), 'active': True}),  # Client-specific buffer
-        'stop': False  # Flag to stop the stream
-    }
+    # Initialize stream buffer with lock
+    with active_streams_lock:
+        active_streams[stream_id] = {
+            'process': process,
+            'clients': defaultdict(lambda: {'buffer': StreamBuffer(), 'active': True}),  # Client-specific buffer
+            'stop': False  # Flag to stop the stream
+        }
 
     # Start a thread to read from the FFmpeg process
     def read_stream():
         try:
-            while not active_streams[stream_id]['stop']:  # Continue only if stream is not stopped
-                chunk = process.stdout.read(4096)  # Read larger chunks to fill the buffer
+            while True:
+                with active_streams_lock:
+                    if active_streams[stream_id]['stop']:
+                        break  # Exit if the stream is marked to stop
 
-                # Check if the FFmpeg process has ended or the stream has no more data
+                chunk = process.stdout.read(4096)  # Read larger chunks to fill the buffer
                 if not chunk:
                     logger.info(f"Source stream ended for {stream_id}. Stopping restream.")
                     break  # Exit loop and stop the stream
 
                 # Append chunk to all active clients
-                with threading.Lock():
+                with active_streams_lock:
                     for client_data in active_streams[stream_id]['clients'].values():
                         if client_data['active']:
                             client_data['buffer'].append(chunk)
+
         except KeyError:
             logger.info(f"Stream {stream_id} has already been stopped.")
         finally:
             # Cleanup when the stream ends
-            active_streams[stream_id]['stop'] = True  # Signal to stop the stream
-            process.kill()  # Ensure FFmpeg is stopped
-            time.sleep(1)  # Give a moment for the stream reader thread to terminate
-            del active_streams[stream_id]  # Remove the stream from active_streams
-            logger.info(f"Stream {stream_id} has been fully terminated.")
+            with active_streams_lock:
+                if stream_id in active_streams:
+                    active_streams[stream_id]['stop'] = True  # Signal to stop the stream
+                    process.kill()  # Ensure FFmpeg is stopped
+                    time.sleep(1)  # Give a moment for the stream reader thread to terminate
+                    del active_streams[stream_id]  # Remove the stream from active_streams
+                    logger.info(f"Stream {stream_id} has been fully terminated.")
 
     threading.Thread(target=read_stream, daemon=True).start()
 
@@ -592,14 +598,15 @@ class Restream(Resource):
             return {"error": "stream_url is required"}, 400
 
         # Start FFmpeg if the stream is not already active
-        if stream_id not in active_streams:
-            start_ffmpeg(stream_id, stream_url)
+        with active_streams_lock:
+            if stream_id not in active_streams:
+                start_ffmpeg(stream_id, stream_url)
 
-        # Mark the client as active
-        client_data = active_streams[stream_id]['clients'][username]
-        client_data['active'] = True
+            # Mark the client as active
+            client_data = active_streams[stream_id]['clients'][username]
+            client_data['active'] = True
 
-        process = active_streams[stream_id]['process']
+            process = active_streams[stream_id]['process']
 
         def generate():
             while True:
@@ -613,17 +620,22 @@ class Restream(Resource):
 
         @response.call_on_close
         def on_close():
-            client_data['active'] = False  # Mark the client as inactive
             logger.info(f"Client {username} disconnected from stream {stream_id}")
 
-            # Cleanup the stream if no more clients are active
-            if not any(c['active'] for c in active_streams[stream_id]['clients'].values()):
-                logger.info(f"No more clients active. Stopping stream {stream_id}")
-                active_streams[stream_id]['stop'] = True  # Signal the stream reader thread to stop
-                process.kill()
-                time.sleep(1)  # Give a moment for the stream reader thread to terminate
-                del active_streams[stream_id]
-                logger.info(f"Stopped stream {stream_id}")
+            with active_streams_lock:
+                # Mark the client as inactive
+                client_data['active'] = False
+
+                # Check if there are no more active clients
+                if not any(c['active'] for c in active_streams[stream_id]['clients'].values()):
+                    logger.info(f"No more clients active. Stopping stream {stream_id}")
+                    active_streams[stream_id]['stop'] = True  # Signal the stream reader thread to stop
+                    process.kill()
+
+                    time.sleep(1)  # Give a moment for the stream reader thread to terminate
+                    if stream_id in active_streams:
+                        del active_streams[stream_id]  # Safely delete the stream
+                        logger.info(f"Stopped stream {stream_id}")
 
         return response
 
