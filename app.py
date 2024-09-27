@@ -551,16 +551,19 @@ def start_ffmpeg(stream_id, stream_url):
 
     def read_stream():
         try:
-            while not active_streams[stream_id]['stop']:
-                chunk = process.stdout.read(4096)
-                if not chunk:
-                    logger.info(f"Source stream ended for {stream_id}. Stopping restream.")
-                    break
+            if stream_id in active_streams:
+                while not active_streams[stream_id]['stop']:
+                    chunk = process.stdout.read(4096)
+                    if not chunk:
+                        logger.info(f"Source stream ended for {stream_id}. Stopping restream.")
+                        break
 
-                # Append chunk to all active clients
-                for client_data in list(active_streams[stream_id]['clients'].values()):
-                    if client_data['active']:
-                        client_data['buffer'].append(chunk)
+                    # Append chunk to all active clients
+                    for client_data in list(active_streams[stream_id]['clients'].values()):
+                        if client_data['active']:
+                            client_data['buffer'].append(chunk)
+            else:
+                logger.info(f"Stream {stream_id} was removed or stopped..")
         except Exception as e:
             logger.error(f"Error while reading stream {stream_id}: {e}")
         finally:
