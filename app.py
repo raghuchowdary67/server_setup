@@ -3,7 +3,7 @@ import os
 import subprocess
 import threading
 import time
-from collections import deque
+from collections import deque, defaultdict
 
 import docker
 import psutil
@@ -545,8 +545,7 @@ def start_ffmpeg(stream_id, stream_url):
     # Initialize stream buffer
     active_streams[stream_id] = {
         'process': process,
-        'clients': 0,
-        'buffer': StreamBuffer()  # Shared buffer for this stream
+        'clients': defaultdict(lambda: {'buffer': StreamBuffer(), 'active': True}),  # Client-specific buffer
     }
 
     # Start a thread to read from the FFmpeg process
@@ -556,18 +555,21 @@ def start_ffmpeg(stream_id, stream_url):
             if not chunk:
                 logger.error(f"Stream ended for {stream_id}")
                 break
-            active_streams[stream_id]['buffer'].append(chunk)
+            # Append chunk to all active clients
+            for client_data in active_streams[stream_id]['clients'].values():
+                if client_data['active']:
+                    client_data['buffer'].append(chunk)
 
     threading.Thread(target=read_stream, daemon=True).start()
 
     return process
 
 
-@ns.route('/restream/<stream_id>')
+@ns.route('/restream/<stream_id>/<username>')
 class Restream(Resource):
     @ns.doc('restream')
-    def get(self, stream_id):
-        logger.info(f"Stream starting for: {stream_id}")
+    def get(self, stream_id, username):
+        logger.info(f"Stream starting for: {stream_id}, User: {username}")
 
         stream_url = request.args.get('url', "http://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")
 
@@ -578,13 +580,15 @@ class Restream(Resource):
         if stream_id not in active_streams:
             start_ffmpeg(stream_id, stream_url)
 
-        # Update the client count for the stream
-        active_streams[stream_id]['clients'] += 1
+        # Mark the client as active
+        client_data = active_streams[stream_id]['clients'][username]
+        client_data['active'] = True
+
         process = active_streams[stream_id]['process']
 
         def generate():
             while True:
-                chunk = active_streams[stream_id]['buffer'].get_chunk()
+                chunk = client_data['buffer'].get_chunk()
                 if chunk:
                     yield chunk
                 else:
@@ -594,10 +598,11 @@ class Restream(Resource):
 
         @response.call_on_close
         def on_close():
-            active_streams[stream_id]['clients'] -= 1
-            logger.info(
-                f"Client disconnected from stream {stream_id}, remaining clients: {active_streams[stream_id]['clients']}")
-            if active_streams[stream_id]['clients'] == 0:
+            client_data['active'] = False  # Mark the client as inactive
+            logger.info(f"Client {username} disconnected from stream {stream_id}")
+
+            # Cleanup the stream if no more clients are active
+            if not any(c['active'] for c in active_streams[stream_id]['clients'].values()):
                 process.kill()
                 del active_streams[stream_id]
                 logger.info(f"Stopped stream {stream_id}")
