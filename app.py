@@ -601,19 +601,22 @@ def start_ffmpeg(stream_id, stream_url):
 
 def cleanup_stream(stream_id):
     """Ensures proper cleanup of FFmpeg process and resources."""
-    if stream_id in active_streams:
-        logger.info(f"Cleaning up stream {stream_id}")
-        active_streams[stream_id]['stop'] = True  # Signal all threads to stop
+    try:
+        if stream_id in active_streams:
+            logger.info(f"Cleaning up stream {stream_id}")
+            active_streams[stream_id]['stop'] = True  # Signal all threads to stop
 
-        process = active_streams[stream_id]['process']
-        process.kill()  # Ensure the FFmpeg process is stopped
+            process = active_streams[stream_id]['process']
+            process.kill()  # Ensure the FFmpeg process is stopped
 
-        # Allow threads to exit before deleting the stream entry
-        time.sleep(1)
+            # Allow threads to exit before deleting the stream entry
+            time.sleep(1)
 
-        # Ensure the stream is removed after threads have safely exited
-        del active_streams[stream_id]
-        logger.info(f"Stream {stream_id} fully terminated.")
+            # Ensure the stream is removed after threads have safely exited
+            del active_streams[stream_id]
+            logger.info(f"Stream {stream_id} fully terminated.")
+    except Exception as e:
+        logger.error(f"Stream was already deleted.. {stream_id}: {e}")
 
 
 @ns.route('/restream/<stream_id>/<username>')
