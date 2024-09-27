@@ -550,18 +550,22 @@ def start_ffmpeg(stream_id, stream_url):
         'last_chunk_time': time.time()  # Track when the last chunk was received
     }
 
-    def monitor_process():
-        """Monitor FFmpeg process and restart if it crashes or exits."""
-        while not active_streams[stream_id]['stop']:
-            stderr_output = process.stderr.readline()
+    def monitor_process(stream_id):
+    """Monitor FFmpeg process and restart if it crashes or exits."""
+    while stream_id in active_streams and not active_streams[stream_id]['stop']:
+        try:
+            stderr_output = active_streams[stream_id]['process'].stderr.readline()
             if stderr_output:
                 logger.error(f"FFmpeg error in stream {stream_id}: {stderr_output.decode()}")
-                # Restart FFmpeg if an error is detected
                 if "Error" in stderr_output.decode():
                     logger.info(f"Restarting FFmpeg for stream {stream_id} due to an error.")
-                    cleanup_stream(stream_id)  # Cleanup the current process
-                    start_ffmpeg(stream_id, stream_url)  # Restart FFmpeg
+                    cleanup_stream(stream_id)
+                    start_ffmpeg(stream_id, active_streams[stream_id]['url'])
                     return
+        except KeyError:
+            logger.info(f"Stream {stream_id} has already been stopped and removed.")
+            break
+    logger.info(f"Exiting monitor process for stream {stream_id}.")
 
     def read_stream():
         """Read the FFmpeg process output and distribute to clients."""
@@ -599,9 +603,15 @@ def cleanup_stream(stream_id):
     """Ensures proper cleanup of FFmpeg process and resources."""
     if stream_id in active_streams:
         logger.info(f"Cleaning up stream {stream_id}")
-        active_streams[stream_id]['stop'] = True
+        active_streams[stream_id]['stop'] = True  # Signal all threads to stop
+
         process = active_streams[stream_id]['process']
         process.kill()  # Ensure the FFmpeg process is stopped
+
+        # Allow threads to exit before deleting the stream entry
+        time.sleep(1)
+
+        # Ensure the stream is removed after threads have safely exited
         del active_streams[stream_id]
         logger.info(f"Stream {stream_id} fully terminated.")
 
