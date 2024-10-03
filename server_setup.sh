@@ -304,6 +304,20 @@ setup_python_env() {
       fi
     fi
   fi
+  if [ ! -d "$HOME/server_setup/monitoring_env" ]; then
+    python3 -m venv "$HOME/server_setup/monitoring_env"
+    source "$HOME/server_setup/monitoring_env/bin/activate"
+    # Install psutil
+    pip3 install psutil
+
+    # Install boto3 only if env_type contains EC2_
+    if [[ "$env_type" == EC2_* ]]; then
+      pip3 install boto3
+    fi
+  else
+    echo "Virtual environment already exists."
+    source "$HOME/server_setup/monitoring_env/bin/activate"
+  fi
 }
 
 # Function to download or use the network monitor script
