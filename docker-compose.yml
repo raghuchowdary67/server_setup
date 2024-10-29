@@ -64,6 +64,20 @@ services:
 #      timeout: 10s
 #      retries: 5
 
+  filebrowser:
+    image: filebrowser/filebrowser
+    container_name: filebrowser
+    restart: always
+    volumes:
+      - /:/host_fs  # Add this line to bind mount the host root
+    environment:
+      - FB_BASEURL=/filemanager  # Optional base URL to serve under /filemanager
+    networks:
+      server_setup_internal-net:
+        ipv4_address: 172.20.0.9
+    expose:
+      - "5011:5011"
+
 volumes:
   mariadb_data:
     driver: local
