@@ -145,7 +145,8 @@ start the vpn docker compose:
 docker compose -f docker-compose-vpn.yml up --build -d
 
 For server_setup only
-docker compose up --build -d server_setup
+docker compose -f docker-compose.yml up --build -d server_setup
+docker compose -f docker-compose.yml up --build -d filebrowser
 
 curl -X 'POST' \
   'http://192.168.1.105:5000/monitor/vpn/test-url' \

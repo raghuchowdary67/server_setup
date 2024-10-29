@@ -10,7 +10,7 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - 8888:8888/tcp # HTTP proxy
+      - "8888:8888/tcp" # HTTP proxy
     env_file:
       - ${HOME}/secrets/.env
     volumes:

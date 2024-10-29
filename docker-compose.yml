@@ -76,7 +76,7 @@ services:
       server_setup_internal-net:
         ipv4_address: 172.20.0.9
     expose:
-      - "5011:5011"
+      - "5011:80"  # Map port 5011 on the host to port 80 in the container
 
 volumes:
   mariadb_data:
