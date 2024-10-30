@@ -69,9 +69,8 @@ services:
     container_name: filebrowser
     restart: always
     volumes:
-#      - /home/data:/data           # Mount the data directory
-#      - /home/redbull:/data/redbull      # Uncomment to mount the redbull directory
-      - ${HOME}:/data
+      - ${HOME}:/srv/redbull
+      - /home/data:/srv/data
     environment:
       - FB_BASEURL=/filemanager  # Optional base URL to serve under /filemanager
     networks:
