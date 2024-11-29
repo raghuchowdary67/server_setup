@@ -156,3 +156,12 @@ curl -X 'POST' \
   "url": "http://harnhrt.leadervpn.xyz/player_api.php?username=pavan5544&password=8682783180",
   "use_vpn": true
 }'
+
+
+Try this for Docker for upgrade, it is quite simple:
+
+sudo apt-get update
+sudo apt-get install docker-ce --only-upgrade
+Results in the following
+
+docker-ce is already the newest version.

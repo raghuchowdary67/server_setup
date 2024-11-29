@@ -30,7 +30,7 @@ services:
       - HTTPPROXY=on  # Ensure the HTTP proxy is enabled
     networks:
       server_setup_internal-net:  # Connect to the same network as other containers
-        ipv4_address: 172.20.0.9  # Assign static IP address
+        ipv4_address: 172.20.0.6  # Assign static IP address
     healthcheck:
       test: [ "CMD", "pgrep", "openvpn" ]  # Example health check using OpenVPN process status
       interval: 1m
