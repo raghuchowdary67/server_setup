@@ -168,6 +168,20 @@ mkdir -p "$SECRETS_DIR"
 # Get the public IP address
 SYSTEM_IP4_IP=$(curl -s http://checkip.amazonaws.com)
 
+read -r -p "Enter SERVER_NAME: " SERVER_NAME
+
+read -r -p "Enter API_BASE_URL (default: http://redbull-admin-backend:8007): " API_BASE_URL
+API_BASE_URL=${API_BASE_URL:-http://redbull-admin-backend:8007}
+
+read -r -p "Enter USER_SERVICE_URL (default: http://redbull-oauth-service:8001): " USER_SERVICE_URL
+USER_SERVICE_URL=${USER_SERVICE_URL:-http://redbull-oauth-service:8001}
+
+read -r -p "Enter AWS_ACCESS_KEY: " AWS_ACCESS_KEY
+read -r -p "Enter AWS_SECRET_KEY: " AWS_SECRET_KEY
+
+read -r -p "Enter OPENVPN_USER: " OPENVPN_USER
+read -r -p "Enter OPENVPN_PASSWORD: " OPENVPN_PASSWORD
+
 # Write environment variables to the .env file
 if [ ! -f "$SECRETS_DIR/.env" ]; then
   echo "Creating .env file with credentials..."
@@ -175,6 +189,13 @@ if [ ! -f "$SECRETS_DIR/.env" ]; then
 INSTANCE_TYPE=$INSTANCE_TYPE
 SYSTEM_TYPE=$SYSTEM_TYPE
 SYSTEM_IP4_IP=$SYSTEM_IP4_IP
+SERVER_NAME=$SERVER_NAME
+API_BASE_URL=$API_BASE_URL
+USER_SERVICE_URL=$USER_SERVICE_URL
+AWS_ACCESS_KEY=$AWS_ACCESS_KEY
+AWS_SECRET_KEY=$AWS_SECRET_KEY
+OPENVPN_USER=$OPENVPN_USER
+OPENVPN_PASSWORD=$OPENVPN_PASSWORD
 EOL
 else
   echo ".env file already exists. Skipping creation."
@@ -243,8 +264,6 @@ MYSQL_USER=$MYSQL_USER
 MYSQL_PASSWORD=$MYSQL_PASSWORD
 MASTER_ADMIN_USER=$MASTER_ADMIN_USER
 MASTER_ADMIN_PASS=$MASTER_ADMIN_PASS
-API_BASE_URL=$API_BASE_URL
-USER_SERVICE_URL=$USER_SERVICE_URL
 EOL
 }
 
@@ -389,12 +408,6 @@ if [ "$SYSTEM_TYPE" == "Main Server" ]; then
 
     read -r -p "Enter MASTER_ADMIN_PASS (default: redpass1431): " MASTER_ADMIN_PASS
     MASTER_ADMIN_PASS=${MASTER_ADMIN_PASS:-redpass1431}
-
-    read -r -p "Enter API_BASE_URL (default: http://redbull-admin-backend:8007): " API_BASE_URL
-    API_BASE_URL=${API_BASE_URL:-http://redbull-admin-backend:8007}
-
-    read -r -p "Enter USER_SERVICE_URL (default: http://redbull-oauth-service:8001): " USER_SERVICE_URL
-    USER_SERVICE_URL=${USER_SERVICE_URL:-http://redbull-oauth-service:8001}
 
     MYSQL_ROOT_PASSWORD=$(generate_random_password)
 
