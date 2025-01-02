@@ -1,0 +1,57 @@
+services:
+  mariadb:
+    image: mariadb:10.6
+    container_name: mariadb
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "bash /home/check_mariadb_health.sh" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    env_file:
+      - ${HOME}/secrets/.env
+    entrypoint: "/home/init.sh"  # Use the script as the entrypoint
+    user: "${CURRENT_UID:-1000}:${CURRENT_GID:-1000}"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql
+      - ./init.sh:/home/init.sh
+      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh
+    ports:
+      - "3306:3306"
+    networks:
+      - internal-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - internal-net
+
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/docker-volumes/mariadb
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${HOME}/docker-volumes/redis
+
+networks:
+  internal-net:
+    driver: bridge
