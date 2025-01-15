@@ -88,13 +88,15 @@ install_yum_packages() {
 
 # Install necessary packages based on the instance type
 if [ "$INSTANCE_TYPE" == "EC2_AMI" ]; then
-  if ! rpm -q curl git &>/dev/null; then
+  # Check each package individually with rpm
+  if ! rpm -q curl &>/dev/null || ! rpm -q git &>/dev/null; then
     install_yum_packages
   else
     echo "Necessary packages are already installed."
   fi
 else
-  if ! dpkg -l curl git &>/dev/null; then
+  # Check each package individually with dpkg
+  if ! dpkg -s curl &>/dev/null || ! dpkg -s git &>/dev/null; then
     install_apt_packages
   else
     echo "Necessary packages are already installed."
@@ -113,17 +115,23 @@ if [ "$INSTANCE_TYPE" == "EC2_AMI" ]; then
   fi
 else
   if ! command -v docker &> /dev/null; then
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-    sudo add-apt-repository \
-       "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-       $(lsb_release -cs) \
-       stable"
+    # Download the Docker GPG key and save it to /usr/share/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+    # Add the Docker repository with the keyring
+    echo \
+      "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    # Update package list and install Docker
     sudo apt update
     sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+    # Start and enable Docker service
     sudo systemctl start docker
     sudo systemctl enable docker
   else
-    echo "Docker is already installed."
+      echo "Docker is already installed"
   fi
 fi
 

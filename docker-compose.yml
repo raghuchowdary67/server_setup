@@ -70,7 +70,7 @@ services:
     restart: always
     volumes:
       - ${HOME}:/srv/redbull
-      - /home/data:/srv/data
+#      - /home/data:/srv/data
     environment:
       - FB_BASEURL=/filemanager  # Optional base URL to serve under /filemanager
     networks:
