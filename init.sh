@@ -10,15 +10,15 @@ echo "Current user info: $(id)"
 ls -ld /docker-entrypoint-initdb.d
 ls -l /docker-entrypoint-initdb.d
 
-# Adjust ownership and permissions of the directory
-chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d || {
-    echo "Failed to change ownership of /docker-entrypoint-initdb.d. Check permissions.";
-    exit 1;
-}
-chmod -R u+w /docker-entrypoint-initdb.d || {
-    echo "Failed to set write permissions on /docker-entrypoint-initdb.d. Check permissions.";
-    exit 1;
-}
+## Adjust ownership and permissions of the directory
+#chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d || {
+#    echo "Failed to change ownership of /docker-entrypoint-initdb.d. Check permissions.";
+#    exit 1;
+#}
+#chmod -R u+w /docker-entrypoint-initdb.d || {
+#    echo "Failed to set write permissions on /docker-entrypoint-initdb.d. Check permissions.";
+#    exit 1;
+#}
 
 # Debugging: Check permissions of the target directory
 ls -ld /docker-entrypoint-initdb.d
