@@ -14,9 +14,9 @@ services:
     user: "${CURRENT_UID:-999}:${CURRENT_GID:-999}"
     volumes:
       - mariadb_data:/var/lib/mysql
-      - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql
-      - ./init.sh:/home/init.sh
-      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh
+      - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql:rw
+      - ./init.sh:/home/init.sh:rw
+      - ./check_mariadb_health.sh:/home/check_mariadb_health.sh:rw
     ports:
       - "3306:3306"
     networks:
