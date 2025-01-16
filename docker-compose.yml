@@ -11,8 +11,8 @@ services:
     env_file:
       - ${HOME}/secrets/.env
     entrypoint: "/home/init.sh"  # Use the script as the entrypoint
-    user: "${CURRENT_UID:-999}:${CURRENT_GID:-999}"
 #    user: "${CURRENT_UID:-999}:${CURRENT_GID:-999}"
+    user: "${CURRENT_UID:-0}:${CURRENT_GID:-0}"
     volumes:
       - mariadb_data:/var/lib/mysql:rw
       - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql:rw
