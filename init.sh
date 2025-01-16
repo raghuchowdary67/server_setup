@@ -5,15 +5,16 @@
 sed "s|\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|\${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|\${MYSQL_USER}|${MYSQL_USER}|g" \
 /docker-entrypoint-initdb.d/init-template.sql > /tmp/init-substituted.sql
 
-# Use cp instead of mv to handle permission issues
-cp /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init-substituted.sql || {
-    echo "Failed to copy substituted file. Check permissions.";
+# Move the substituted file
+mv /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init-substituted.sql || {
+    echo "Failed to move substituted file. Check permissions.";
     exit 1;
 }
 
 # Confirm the file was created
 ls -l /docker-entrypoint-initdb.d/
 
-#exec /usr/local/bin/docker-entrypoint.sh mysqld
 # Start MariaDB
-exec /usr/sbin/mysqld
+exec /usr/local/bin/docker-entrypoint.sh mysqld
+## Start MariaDB
+#exec /usr/sbin/mysqld
