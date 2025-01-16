@@ -14,6 +14,6 @@ cp /tmp/init-substituted.sql /docker-entrypoint-initdb.d/init-substituted.sql ||
 # Confirm the file was created
 ls -l /docker-entrypoint-initdb.d/
 
-exec /usr/local/bin/docker-entrypoint.sh mysqld
+#exec /usr/local/bin/docker-entrypoint.sh mysqld
 # Start MariaDB
-#exec /usr/sbin/mysqld
+exec /usr/sbin/mysqld
