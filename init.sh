@@ -16,5 +16,3 @@ ls -l /docker-entrypoint-initdb.d/
 
 # Start MariaDB
 exec /usr/local/bin/docker-entrypoint.sh mariadbd
-## Start MariaDB
-#exec /usr/sbin/mysqld
