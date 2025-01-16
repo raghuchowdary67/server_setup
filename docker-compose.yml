@@ -14,7 +14,7 @@ services:
     user: "${CURRENT_UID:-999}:${CURRENT_GID:-999}"
 #    user: "${CURRENT_UID:-999}:${CURRENT_GID:-999}"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mariadb_data:/var/lib/mysql:rw
       - ./init-template.sql:/docker-entrypoint-initdb.d/init-template.sql:rw
       - ./init.sh:/home/init.sh:rw
       - ./check_mariadb_health.sh:/home/check_mariadb_health.sh:rw
@@ -87,6 +87,8 @@ volumes:
       type: none
       o: bind
       device: ${HOME}/docker-volumes/mariadb
+      uid: 999
+      gid: 999
   redis_data:
     driver: local
     driver_opts:
