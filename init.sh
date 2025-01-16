@@ -4,6 +4,16 @@
 # Change ownership of the init directory
 #chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d
 
+# Debugging: Print current user and group
+echo "Current user: $(id -u)"
+echo "Current group: $(id -g)"
+echo "Current user info: $(id)"
+
+# Debugging: Check permissions of the target directory
+ls -ld /docker-entrypoint-initdb.d
+ls -l /docker-entrypoint-initdb.d
+
+
 # Substitute environment variables in the SQL file
 sed "s|\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|\${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|\${MYSQL_USER}|${MYSQL_USER}|g" \
 /docker-entrypoint-initdb.d/init-template.sql > /tmp/init-substituted.sql
