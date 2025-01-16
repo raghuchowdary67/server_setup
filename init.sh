@@ -10,12 +10,6 @@ echo "Current user info: $(id)"
 ls -ld /docker-entrypoint-initdb.d
 ls -l /docker-entrypoint-initdb.d
 
-## Change ownership of the init directory if not owned by the current user
-#if [ "$(stat -c '%u' /docker-entrypoint-initdb.d)" != "$(id -u)" ]; then
-#    echo "Changing ownership of /docker-entrypoint-initdb.d to $(id -u):$(id -g)"
-#    chown -R $(id -u):$(id -g) /docker-entrypoint-initdb.d
-#fi
-
 # Substitute environment variables in the SQL file
 sed "s|\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|\${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|\${MYSQL_USER}|${MYSQL_USER}|g" \
 /docker-entrypoint-initdb.d/init-template.sql > /tmp/init-substituted.sql

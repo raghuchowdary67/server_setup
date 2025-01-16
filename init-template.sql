@@ -10,7 +10,7 @@ GRANT ALL PRIVILEGES ON `${MYSQL_DATABASE}`.* TO '${MYSQL_USER}'@'%' WITH GRANT 
 -- Grant privileges to the user on the secondary database
 GRANT ALL PRIVILEGES ON `${MYSQL_USER_DATABASE}`.* TO '${MYSQL_USER}'@'%' WITH GRANT OPTION;
 
--- Apply changes
+-- Apply changes si
 FLUSH PRIVILEGES;
 
 -- Optional: Verify creation
