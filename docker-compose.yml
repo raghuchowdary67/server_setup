@@ -87,8 +87,6 @@ volumes:
       type: none
       o: bind
       device: ${HOME}/docker-volumes/mariadb
-      uid: 999
-      gid: 999
   redis_data:
     driver: local
     driver_opts:

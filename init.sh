@@ -8,7 +8,10 @@ echo "Current user info: $(id)"
 
 # Debugging: Check permissions of the target directory
 ls -ld /docker-entrypoint-initdb.d
-ls -l /docker-entrypoint-initdb.d
+ls -l /docker-entrypoint-initdb.
+# Debugging: Check permissions of the database directory
+ls -ld /var/lib/mysql
+ls -l /var/lib/mysql
 
 # Change ownership of the mounted directories and files
 chown -R mysql:mysql /docker-entrypoint-initdb.d /var/lib/mysql /home
@@ -16,6 +19,9 @@ chown -R mysql:mysql /docker-entrypoint-initdb.d /var/lib/mysql /home
 # Debugging: Check permissions of the target directory
 ls -ld /docker-entrypoint-initdb.d
 ls -l /docker-entrypoint-initdb.d
+# Debugging: Check permissions of the database directory
+ls -ld /var/lib/mysql
+ls -l /var/lib/mysql
 
 # Substitute environment variables in the SQL file
 sed "s|\${MYSQL_DATABASE}|${MYSQL_DATABASE}|g; s|\${MYSQL_USER_DATABASE}|${MYSQL_USER_DATABASE}|g; s|\${MYSQL_USER}|${MYSQL_USER}|g" \
